@@ -1,37 +1,62 @@
-use libc;
+use std::ffi::{CStr, CString};
+use std::process;
 
-pub mod postal {
-    use super::*;
+pub mod ffi;
 
-    #[link(name = "postal")]
-    extern "C" {
-        pub fn libpostal_get_address_parser_default_options() -> libpostal_address_parser_options;
-        pub fn libpostal_setup() -> bool;
-        pub fn libpostal_setup_parser() -> bool;
-        pub fn libpostal_teardown() -> bool;
-        pub fn libpostal_teardown_parser() -> bool;
+pub struct AddressParserResponse {
+    pub components: Vec<String>,
+    pub labels: Vec<String>,
+}
 
-        pub fn libpostal_parse_address(
-            address: *const libc::c_char,
-            options: libpostal_address_parser_options,
-        ) -> *const libpostal_address_parser_response;
+impl IntoIterator for AddressParserResponse {
+    type Item = (String, String);
+    type IntoIter = std::iter::Zip<std::vec::IntoIter<String>, std::vec::IntoIter<String>>;
 
-        pub fn libpostal_address_parser_response_destroy(response: *const libpostal_address_parser_response);
+    fn into_iter(self) -> Self::IntoIter {
+        self.components.into_iter().zip(self.labels)
+    }
+}
+
+pub fn setup() {
+    unsafe {
+        if !ffi::libpostal_setup() || !ffi::libpostal_setup_parser() {
+            process::exit(1);
+        }
+    }
+}
+
+pub fn teardown() {
+    unsafe {
+        ffi::libpostal_teardown();
+        ffi::libpostal_teardown_parser();
+    }
+}
+
+pub fn parse_address(address: &str) -> AddressParserResponse {
+    let address = CString::new(address).unwrap();
+    let mut response = AddressParserResponse {
+        components: Vec::new(),
+        labels: Vec::new(),
+    };
+
+    unsafe {
+        let options = ffi::libpostal_get_address_parser_default_options();
+        let raw = ffi::libpostal_parse_address(address.as_ptr() as *const libc::c_char, options);
+
+        if let Some(parsed) = raw.as_ref() {
+            for i in 0..parsed.num_components {
+                let component = CStr::from_ptr(*parsed.components.add(i));
+                let label = CStr::from_ptr(*parsed.labels.add(i));
+                response
+                    .components
+                    .push(String::from(component.to_str().unwrap()));
+                response.labels.push(String::from(label.to_str().unwrap()));
+            }
+        };
+        ffi::libpostal_address_parser_response_destroy(raw);
     }
 
-    #[repr(C)]
-    pub struct libpostal_address_parser_options {
-        language: *const libc::c_char,
-        country: *const libc::c_char,
-    }
-
-    #[repr(C)]
-    pub struct libpostal_address_parser_response {
-        pub num_components: usize,
-        pub components: *mut *const libc::c_char,
-        pub labels: *mut *const libc::c_char,
-    }
-
+    response
 }
 
 #[cfg(test)]
