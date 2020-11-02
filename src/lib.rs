@@ -17,19 +17,15 @@ impl IntoIterator for AddressParserResponse {
     }
 }
 
-pub fn setup() {
-    unsafe {
-        if !ffi::libpostal_setup() || !ffi::libpostal_setup_parser() {
-            process::exit(1);
-        }
+pub unsafe fn setup() {
+    if !ffi::libpostal_setup() || !ffi::libpostal_setup_parser() {
+        process::exit(1);
     }
 }
 
-pub fn teardown() {
-    unsafe {
-        ffi::libpostal_teardown();
-        ffi::libpostal_teardown_parser();
-    }
+pub unsafe fn teardown() {
+    ffi::libpostal_teardown();
+    ffi::libpostal_teardown_parser();
 }
 
 pub fn parse_address(address: &str) -> AddressParserResponse {

@@ -1,7 +1,7 @@
 use rustpostal::*;
 
 fn main() {
-    setup();
+    unsafe { setup() };
 
     let address = "781 Franklin Ave Crown Heights Brooklyn NYC NY 11216 USA";
 
@@ -9,5 +9,6 @@ fn main() {
     for (component, label) in response {
         println!("{}: {}", component, label);
     }
-    teardown();
+
+    unsafe { teardown() };
 }
