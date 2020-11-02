@@ -1,7 +1,7 @@
 use std::ffi::{CStr, CString};
 use std::process;
 
-pub mod ffi;
+mod ffi;
 
 pub struct AddressParserResponse {
     pub components: Vec<String>,
