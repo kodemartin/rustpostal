@@ -8,12 +8,69 @@ pub struct AddressParserResponse {
     pub labels: Vec<String>,
 }
 
+impl AddressParserResponse {
+    pub fn new() -> AddressParserResponse {
+        AddressParserResponse {
+            components: Vec::new(),
+            labels: Vec::new(),
+        }
+    }
+}
+
 impl IntoIterator for AddressParserResponse {
     type Item = (String, String);
     type IntoIter = std::iter::Zip<std::vec::IntoIter<String>, std::vec::IntoIter<String>>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.components.into_iter().zip(self.labels)
+    }
+}
+
+pub struct AddressParserOptions<'a> {
+    language: Option<&'a str>,
+    country: Option<&'a str>,
+}
+
+impl<'a> AddressParserOptions<'a> {
+    pub fn new (language: Option<&'a str>, country: Option<&'a str>) -> AddressParserOptions<'a> {
+        let (mut default_l, mut default_c) = (None, None);
+        if language.is_none() || country.is_none() {
+            let (l, c) = Self::get_default_options();
+            default_l = l;
+            default_c = c;
+        }
+        let language = language.or(default_l);
+        let country = country.or(default_c);
+        AddressParserOptions{ language, country }
+    }
+
+    fn get_default_options() -> (Option<&'a str>, Option<&'a str>) {
+        let (mut language, mut country) = (None, None);
+        unsafe {
+            let options = ffi::libpostal_get_address_parser_default_options();
+            if !options.language.is_null() {
+                language = Some(CStr::from_ptr(options.language).to_str().unwrap());
+            }
+            if !options.country.is_null() {
+                country = Some(CStr::from_ptr(options.language).to_str().unwrap());
+            }
+        }
+        (language, country)
+    }
+
+    unsafe fn as_ffi_options(&self) -> ffi::libpostal_address_parser_options {
+        let (language, country): (*const libc::c_char, *const libc::c_char);
+        if self.language.is_none() {
+            language = std::ptr::null();
+        } else {
+            language = self.language.unwrap().as_ptr() as *const libc::c_char;
+        }
+        if self.country.is_none() {
+            country = std::ptr::null();
+        } else {
+            country = self.country.unwrap().as_ptr() as *const libc::c_char;
+        }
+        ffi::libpostal_address_parser_options { language, country }
     }
 }
 
@@ -28,17 +85,15 @@ pub unsafe fn teardown() {
     ffi::libpostal_teardown_parser();
 }
 
-pub fn parse_address(address: &str) -> AddressParserResponse {
+pub fn parse_address(address: &str, language: Option<&str>, country: Option<&str>) -> AddressParserResponse {
     let address = CString::new(address).unwrap();
-    let mut response = AddressParserResponse {
-        components: Vec::new(),
-        labels: Vec::new(),
-    };
+    let mut response = AddressParserResponse::new();
+
+    let options = AddressParserOptions::new(language, country);
 
     unsafe {
-        let options = ffi::libpostal_get_address_parser_default_options();
+        let options = options.as_ffi_options();
         let raw = ffi::libpostal_parse_address(address.as_ptr() as *const libc::c_char, options);
-
         if let Some(parsed) = raw.as_ref() {
             for i in 0..parsed.num_components {
                 let component = CStr::from_ptr(*parsed.components.add(i));
@@ -57,8 +112,16 @@ pub fn parse_address(address: &str) -> AddressParserResponse {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
+    fn default_address_parser_options() {
+        let options = AddressParserOptions::new(None, None);
+        assert_eq!(options.language, None);
+        assert_eq!(options.country, None);
+        let options = AddressParserOptions::new(None, Some("EN"));
+        assert_eq!(options.language, None);
+        assert_eq!(options.country, Some("EN"));
     }
+
 }
