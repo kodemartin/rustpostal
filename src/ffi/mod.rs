@@ -20,8 +20,8 @@ extern "C" {
 
 #[repr(C)]
 pub struct libpostal_address_parser_options {
-    language: *const libc::c_char,
-    country: *const libc::c_char,
+    pub language: *const libc::c_char,
+    pub country: *const libc::c_char,
 }
 
 #[repr(C)]
