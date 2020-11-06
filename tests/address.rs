@@ -2,13 +2,14 @@ extern crate rustpostal;
 
 fn collect_actual(address: &str) -> Vec<(String, String)> {
     rustpostal::address::parse_address(address, None, None)
-            .into_iter()
-            .collect()
+        .into_iter()
+        .collect()
 }
 
 fn collect_expected(expected: Vec<(&str, &str)>) -> Vec<(String, String)> {
-    expected.iter()
-        .map(|(c, l)| {(String::from(*c), String::from(*l))})
+    expected
+        .iter()
+        .map(|(c, l)| (String::from(*c), String::from(*l)))
         .collect()
 }
 
@@ -26,7 +27,7 @@ fn us_parse() {
         ("road", "nostrand ave"),
         ("city_district", "brooklyn"),
         ("state", "n.y."),
-        ("postcode", "11216")
+        ("postcode", "11216"),
     ];
     assert_actual_eq_expected(address, expected);
 }

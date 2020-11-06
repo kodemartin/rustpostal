@@ -31,7 +31,7 @@ pub struct AddressParserOptions<'a> {
 }
 
 impl<'a> AddressParserOptions<'a> {
-    pub fn new (language: Option<&'a str>, country: Option<&'a str>) -> AddressParserOptions<'a> {
+    pub fn new(language: Option<&'a str>, country: Option<&'a str>) -> AddressParserOptions<'a> {
         let (mut default_l, mut default_c) = (None, None);
         if language.is_none() || country.is_none() {
             let (l, c) = Self::get_default_options();
@@ -40,7 +40,7 @@ impl<'a> AddressParserOptions<'a> {
         }
         let language = language.or(default_l);
         let country = country.or(default_c);
-        AddressParserOptions{ language, country }
+        AddressParserOptions { language, country }
     }
 
     fn get_default_options() -> (Option<&'a str>, Option<&'a str>) {
@@ -73,7 +73,11 @@ impl<'a> AddressParserOptions<'a> {
     }
 }
 
-pub fn parse_address(address: &str, language: Option<&str>, country: Option<&str>) -> AddressParserResponse {
+pub fn parse_address(
+    address: &str,
+    language: Option<&str>,
+    country: Option<&str>,
+) -> AddressParserResponse {
     let address = CString::new(address).unwrap();
     let mut response = AddressParserResponse::new();
 
@@ -111,5 +115,4 @@ mod tests {
         assert_eq!(options.language, None);
         assert_eq!(options.country, Some("EN"));
     }
-
 }
