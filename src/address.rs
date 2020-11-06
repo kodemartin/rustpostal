@@ -21,7 +21,7 @@ impl IntoIterator for AddressParserResponse {
     type IntoIter = std::iter::Zip<std::vec::IntoIter<String>, std::vec::IntoIter<String>>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.components.into_iter().zip(self.labels)
+        self.labels.into_iter().zip(self.components)
     }
 }
 
