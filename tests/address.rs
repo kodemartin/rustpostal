@@ -61,9 +61,9 @@ fn es_parse() {
 
 #[test]
 fn parse() {
-    unsafe { rustpostal::setup() }
+    unsafe { rustpostal::setup(Some("address")) }
     us_parse();
     gb_parse();
     es_parse();
-    unsafe { rustpostal::teardown() }
+    unsafe { rustpostal::teardown(Some("address")) }
 }
