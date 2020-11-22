@@ -3,14 +3,14 @@ use std::ffi::{CStr, CString};
 use crate::ffi;
 
 pub struct AddressParserResponse {
-    pub components: Vec<String>,
+    pub tokens: Vec<String>,
     pub labels: Vec<String>,
 }
 
 impl AddressParserResponse {
     pub fn new() -> AddressParserResponse {
         AddressParserResponse {
-            components: Vec::new(),
+            tokens: Vec::new(),
             labels: Vec::new(),
         }
     }
@@ -21,7 +21,7 @@ impl IntoIterator for AddressParserResponse {
     type IntoIter = std::iter::Zip<std::vec::IntoIter<String>, std::vec::IntoIter<String>>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.labels.into_iter().zip(self.components)
+        self.labels.into_iter().zip(self.tokens)
     }
 }
 
@@ -91,7 +91,7 @@ pub fn parse_address(
                 let component = CStr::from_ptr(*parsed.components.add(i));
                 let label = CStr::from_ptr(*parsed.labels.add(i));
                 response
-                    .components
+                    .tokens
                     .push(String::from(component.to_str().unwrap()));
                 response.labels.push(String::from(label.to_str().unwrap()));
             }
