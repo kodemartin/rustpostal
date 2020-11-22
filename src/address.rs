@@ -1,7 +1,32 @@
+//! Parsing utilities for postal addresses.
+//!
+//! # Examples
+//!
+//! ## Parsing
+//!
+//! ```
+//! use rustpostal::LibModules;
+//! use rustpostal::address;
+//!
+//! fn main() {
+//!     unsafe { rustpostal::setup(LibModules::Address) }
+//!
+//!     let address = "St Johns Centre, Rope Walk, Bedford, Bedfordshire, MK42 0XE, United Kingdom";
+//!
+//!     let labeled_tokens = address::parse_address(address, None, None);
+//!
+//!     for (label, token) in labeled_tokens.into_iter() {
+//!         println!("{}: {}", label, token);
+//!     }
+//!
+//!     unsafe { rustpostal::teardown(LibModules::Address) }
+//! }
+//! ```
 use std::ffi::{CStr, CString};
 
 use crate::ffi;
 
+/// Represents the parsing result.
 pub struct AddressParserResponse {
     pub tokens: Vec<String>,
     pub labels: Vec<String>,
@@ -20,17 +45,22 @@ impl IntoIterator for AddressParserResponse {
     type Item = (String, String);
     type IntoIter = std::iter::Zip<std::vec::IntoIter<String>, std::vec::IntoIter<String>>;
 
+    /// Iterates over `(label, token)` pairs.
     fn into_iter(self) -> Self::IntoIter {
         self.labels.into_iter().zip(self.tokens)
     }
 }
 
+/// Parsing options.
 pub struct AddressParserOptions<'a> {
     language: Option<&'a str>,
     country: Option<&'a str>,
 }
 
 impl<'a> AddressParserOptions<'a> {
+    /// Create a new instance with the default options from the library.
+    ///
+    /// `language`, and `country` if given override the default values.
     pub fn new(language: Option<&'a str>, country: Option<&'a str>) -> AddressParserOptions<'a> {
         let (mut default_l, mut default_c) = (None, None);
         if language.is_none() || country.is_none() {
@@ -73,6 +103,11 @@ impl<'a> AddressParserOptions<'a> {
     }
 }
 
+/// Analyze address into labeled tokens.
+///
+/// * `address`: The postal address to parse.
+/// * `language`: A language code.
+/// * `country`: A country code.
 pub fn parse_address(
     address: &str,
     language: Option<&str>,

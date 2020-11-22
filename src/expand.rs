@@ -1,3 +1,25 @@
+//! Normalization utilities.
+//!
+//! # Examples
+//!
+//! ```
+//! use rustpostal::LibModules;
+//! use rustpostal::expand;
+//!
+//! fn main() {
+//!     unsafe { rustpostal::setup(LibModules::Expand) }
+//!
+//!     let address = "St Johns Centre, Rope Walk, Bedford, Bedfordshire, MK42 0XE, United Kingdom";
+//!
+//!     let expanded = expand::expand_address_with_options(address, Some(vec!["en"]));
+//!
+//!     for expansion in expanded {
+//!         println!("{}", expansion);
+//!     }
+//!
+//!     unsafe { rustpostal::teardown(LibModules::Expand) }
+//! }
+//! ```
 #![allow(unused)]
 
 use std::ffi::{CStr, CString};
@@ -30,10 +52,12 @@ const LIBPOSTAL_ADDRESS_DEFAULT_COMPONENTS: u16 = LIBPOSTAL_ADDRESS_NAME
     | LIBPOSTAL_ADDRESS_STAIRCASE
     | LIBPOSTAL_ADDRESS_POSTAL_CODE;
 
+/// Bit set of active address components in normalization options.
 #[derive(Debug)]
 pub struct AddressComponents(u16);
 
 impl AddressComponents {
+    /// Use default bit set.
     pub fn new() -> AddressComponents {
         AddressComponents(LIBPOSTAL_ADDRESS_DEFAULT_COMPONENTS)
     }
@@ -91,6 +115,7 @@ impl AddressComponents {
     }
 }
 
+/// Normalization options.
 #[derive(Debug)]
 pub struct NormalizeOptions<'a> {
     pub languages: Option<Vec<&'a str>>,
@@ -119,6 +144,9 @@ pub struct NormalizeOptions<'a> {
 }
 
 impl<'a> NormalizeOptions<'a> {
+    /// Create new instance with default options.
+    ///
+    /// `languages` override the respective option field, if given.
     pub fn new(languages: Option<Vec<&'a str>>) -> NormalizeOptions<'a> {
         let mut options = Self::get_default_options();
         if languages.is_some() {
@@ -127,7 +155,7 @@ impl<'a> NormalizeOptions<'a> {
         options
     }
 
-    pub fn get_default_options() -> NormalizeOptions<'a> {
+    fn get_default_options() -> NormalizeOptions<'a> {
         let mut options = Self::initialize();
         unsafe {
             let ffi_options = ffi::libpostal_get_default_options();
@@ -229,10 +257,12 @@ impl<'a> NormalizeOptions<'a> {
     }
 }
 
+/// Normalize address with default options.
 pub fn expand_address(address: &str) -> Vec<String> {
     expand_address_with_options(address, None)
 }
 
+/// Normalize address with optional user-defined languages.
 pub fn expand_address_with_options(address: &str, languages: Option<Vec<&str>>) -> Vec<String> {
     let address = CString::new(address).unwrap();
     let mut expanded: Vec<String> = Vec::new();

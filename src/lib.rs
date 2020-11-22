@@ -1,6 +1,6 @@
 //! # `rustpostal`
 //!
-//! `libpostal` bindings for the Rust programming language.
+//! [`libpostal`][libpostal] bindings for the Rust programming language.
 //!
 //! [libpostal]: https://github.com/openvenues/libpostal
 
