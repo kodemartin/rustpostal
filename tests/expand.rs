@@ -1,6 +1,7 @@
 extern crate rustpostal;
 
 use rustpostal::expand;
+use rustpostal::LibModules;
 
 const TEST_CASES: &[(&str, &str, &str)] = &[
     ("123 Main St. #2f", "123 main street number 2f", "en"),
@@ -59,20 +60,20 @@ fn expansion_contains_phrase_with_options(address: &str, phrase: &str, lang: &st
 
 #[test]
 fn expand() {
-    unsafe { rustpostal::setup(Some("expand")) };
+    unsafe { rustpostal::setup(LibModules::Expand) };
     for (address, phrase, _) in TEST_CASES {
         assert!(expansion_contains_phrase(address, phrase));
     }
-    unsafe { rustpostal::teardown(Some("expand")) };
+    unsafe { rustpostal::teardown(LibModules::Expand) };
 }
 
 #[test]
 fn expand_with_options() {
-    unsafe { rustpostal::setup(Some("expand")) };
+    unsafe { rustpostal::setup(LibModules::Expand) };
     for (address, phrase, lang) in TEST_CASES {
         assert!(expansion_contains_phrase_with_options(
             address, phrase, lang
         ));
     }
-    unsafe { rustpostal::teardown(Some("expand")) };
+    unsafe { rustpostal::teardown(LibModules::Expand) };
 }

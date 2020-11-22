@@ -4,11 +4,20 @@
 //!
 //! [libpostal]: https://github.com/openvenues/libpostal
 
+use self::LibModules::*;
 use std::process;
 
 pub mod address;
 pub mod expand;
 mod ffi;
+
+/// Library modules to setup and teardown, at the start
+/// and at the end of our program.
+pub enum LibModules {
+    Address,
+    Expand,
+    All,
+}
 
 unsafe fn setup_parser() {
     if !ffi::libpostal_setup_parser() {
@@ -30,41 +39,49 @@ unsafe fn teardown_classifier() {
     ffi::libpostal_teardown_language_classifier();
 }
 
-pub unsafe fn setup(component: Option<&str>) {
+/// Setup the necessary `libpostal` components.
+///
+/// # Safety
+///
+/// The method should be complemented by [`teardown`](self::teardown)
+/// to make the calling program safe.
+pub unsafe fn setup(component: LibModules) {
     if !ffi::libpostal_setup() {
         process::exit(1);
     }
     match component {
-        Some("expand") => {
+        Expand => {
             setup_classifier();
         }
-        Some("address") => {
+        Address => {
             setup_parser();
         }
-        Some("all") => {
+        All => {
             setup_parser();
             setup_classifier();
         }
-        Some(_) => {}
-        None => {}
     }
 }
 
-pub unsafe fn teardown(component: Option<&str>) {
+/// Teardown initialized `libpostal` components.
+///
+/// # Safety
+///
+/// The method should follow [`setup`](self::setup) and makes the calling
+/// program safe.
+pub unsafe fn teardown(component: LibModules) {
     ffi::libpostal_teardown();
     match component {
-        Some("expand") => {
+        Expand => {
             teardown_classifier();
         }
-        Some("address") => {
+        Address => {
             teardown_parser();
         }
-        Some("all") => {
+        All => {
             teardown_parser();
             teardown_classifier();
         }
-        Some(_) => {}
-        None => {}
     }
 }
 
@@ -75,32 +92,24 @@ mod tests {
     #[test]
     fn setup_teardown_expand() {
         unsafe {
-            setup(Some("expand"));
-            teardown(Some("expand"));
+            setup(Expand);
+            teardown(Expand);
         }
     }
 
     #[test]
     fn setup_teardown_parser() {
         unsafe {
-            setup(Some("address"));
-            teardown(Some("address"));
+            setup(Address);
+            teardown(Address);
         }
     }
 
     #[test]
     fn setup_teardown_all() {
         unsafe {
-            setup(Some("all"));
-            teardown(Some("all"));
-        }
-    }
-
-    #[test]
-    fn setup_teardown_none() {
-        unsafe {
-            setup(None);
-            teardown(None);
+            setup(All);
+            teardown(All);
         }
     }
 }

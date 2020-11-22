@@ -1,4 +1,5 @@
 extern crate rustpostal;
+use rustpostal::LibModules;
 
 fn collect_actual(address: &str) -> Vec<(String, String)> {
     rustpostal::address::parse_address(address, None, None)
@@ -61,9 +62,9 @@ fn es_parse() {
 
 #[test]
 fn parse() {
-    unsafe { rustpostal::setup(Some("address")) }
+    unsafe { rustpostal::setup(LibModules::Address) }
     us_parse();
     gb_parse();
     es_parse();
-    unsafe { rustpostal::teardown(Some("address")) }
+    unsafe { rustpostal::teardown(LibModules::Address) }
 }
