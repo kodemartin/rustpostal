@@ -6,7 +6,7 @@ for street addresses anywhere in the world.
 ## Usage
 
 
-```
+```rust
 use rustpostal;
 use rustpostal::address;
 use rustpostal::expand;
