@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use libc;
 
 #[link(name = "postal")]
@@ -23,7 +25,7 @@ extern "C" {
     pub fn libpostal_expand_address(
         input: *const libc::c_char,
         options: libpostal_normalize_options,
-        n: *const libc::size_t,
+        n: *mut libc::size_t,
     ) -> *const *const libc::c_char;
     pub fn libpostal_expansion_array_destroy(
         expansions: *const *const libc::c_char,
@@ -46,26 +48,26 @@ pub struct libpostal_address_parser_response {
 
 #[repr(C)]
 pub struct libpostal_normalize_options {
-    languages: *const *const libc::c_char,
-    num_lanugages: libc::size_t,
-    address_components: u16,
+    pub languages: *mut *const libc::c_char,
+    pub num_languages: libc::size_t,
+    pub address_components: u16,
     // String options
-    latin_ascii: bool,
-    transliterate: bool,
-    strip_accents: bool,
-    decompose: bool,
-    lowercase: bool,
-    trim_string: bool,
-    drop_parentheticals: bool,
-    replace_numeric_hyphens: bool,
-    delete_numeric_hyphens: bool,
-    split_alpha_from_numeric: bool,
-    replace_word_hyphens: bool,
-    delete_word_hyphens: bool,
-    delete_final_periods: bool,
-    delete_acronym_periods: bool,
-    drop_english_possessives: bool,
-    delete_apostrophes: bool,
-    expand_numex: bool,
-    roman_numerals: bool,
+    pub latin_ascii: bool,
+    pub transliterate: bool,
+    pub strip_accents: bool,
+    pub decompose: bool,
+    pub lowercase: bool,
+    pub trim_string: bool,
+    pub drop_parentheticals: bool,
+    pub replace_numeric_hyphens: bool,
+    pub delete_numeric_hyphens: bool,
+    pub split_alpha_from_numeric: bool,
+    pub replace_word_hyphens: bool,
+    pub delete_word_hyphens: bool,
+    pub delete_final_periods: bool,
+    pub delete_acronym_periods: bool,
+    pub drop_english_possessives: bool,
+    pub delete_apostrophes: bool,
+    pub expand_numex: bool,
+    pub roman_numerals: bool,
 }
