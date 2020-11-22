@@ -3,6 +3,10 @@ name = "rustpostal"
 version = "0.1.0"
 authors = ["Konstantinos Demartinos <kodemartin@protonmail.ch>"]
 edition = "2018"
+description = "Rust bindings to libpostal"
+readme = "README.md"
+repository = "https://github.com/kodemartin/rustpostal"
+license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
