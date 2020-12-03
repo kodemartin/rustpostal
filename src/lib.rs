@@ -4,8 +4,9 @@
 //!
 //! [libpostal]: https://github.com/openvenues/libpostal
 
-use self::LibModules::*;
 use std::process;
+
+use self::LibModules::*;
 
 pub mod address;
 pub mod expand;

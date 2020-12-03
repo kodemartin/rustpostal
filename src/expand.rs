@@ -23,97 +23,46 @@
 #![allow(unused)]
 
 use std::ffi::{CStr, CString};
+use bitflags::bitflags;
 
 use crate::ffi;
 
-//* Bit-set for toggling address components
-const LIBPOSTAL_ADDRESS_NONE: u16 = 0;
-const LIBPOSTAL_ADDRESS_ANY: u16 = 1 << 0;
-const LIBPOSTAL_ADDRESS_NAME: u16 = 1 << 1;
-const LIBPOSTAL_ADDRESS_HOUSE_NUMBER: u16 = 1 << 2;
-const LIBPOSTAL_ADDRESS_STREET: u16 = 1 << 3;
-const LIBPOSTAL_ADDRESS_UNIT: u16 = 1 << 4;
-const LIBPOSTAL_ADDRESS_LEVEL: u16 = 1 << 5;
-const LIBPOSTAL_ADDRESS_STAIRCASE: u16 = 1 << 6;
-const LIBPOSTAL_ADDRESS_ENTRANCE: u16 = 1 << 7;
-const LIBPOSTAL_ADDRESS_CATEGORY: u16 = 1 << 8;
-const LIBPOSTAL_ADDRESS_NEAR: u16 = 1 << 9;
-const LIBPOSTAL_ADDRESS_TOPONYM: u16 = 1 << 13;
-const LIBPOSTAL_ADDRESS_POSTAL_CODE: u16 = 1 << 14;
-const LIBPOSTAL_ADDRESS_PO_BOX: u16 = 1 << 15;
-const LIBPOSTAL_ADDRESS_ALL: u16 = 1 << 16 - 1;
-const LIBPOSTAL_ADDRESS_DEFAULT_COMPONENTS: u16 = LIBPOSTAL_ADDRESS_NAME
-    | LIBPOSTAL_ADDRESS_HOUSE_NUMBER
-    | LIBPOSTAL_ADDRESS_STREET
-    | LIBPOSTAL_ADDRESS_PO_BOX
-    | LIBPOSTAL_ADDRESS_UNIT
-    | LIBPOSTAL_ADDRESS_LEVEL
-    | LIBPOSTAL_ADDRESS_ENTRANCE
-    | LIBPOSTAL_ADDRESS_STAIRCASE
-    | LIBPOSTAL_ADDRESS_POSTAL_CODE;
+bitflags! {
+    /// Bit set of active address components in normalization options.
+    pub struct AddressComponents: u16 {
+        const NONE = 0;
+        const ANY = 1 << 0;
+        const NAME = 1 << 1;
+        const HOUSE_NUMBER = 1 << 2;
+        const STREET = 1 << 3;
+        const UNIT = 1 << 4;
+        const LEVEL = 1 << 5;
+        const STAIRCASE = 1 << 6;
+        const ENTRANCE = 1 << 7;
+        const CATEGORY = 1 << 8;
+        const NEAR = 1 << 9;
+        const TOPONYM = 1 << 13;
+        const POSTAL_CODE = 1 << 14;
+        const PO_BOX = 1 << 15;
+        }
+}
 
-/// Bit set of active address components in normalization options.
-#[derive(Debug)]
-pub struct AddressComponents(u16);
-
-impl AddressComponents {
-    /// Use default bit set.
-    pub fn new() -> AddressComponents {
-        AddressComponents(LIBPOSTAL_ADDRESS_DEFAULT_COMPONENTS)
-    }
-
-    pub fn toggle_name(&mut self) {
-        self.0 ^= LIBPOSTAL_ADDRESS_NAME;
-    }
-
-    pub fn toggle_house_number(&mut self) {
-        self.0 ^= LIBPOSTAL_ADDRESS_HOUSE_NUMBER;
-    }
-
-    pub fn toggle_street(&mut self) {
-        self.0 ^= LIBPOSTAL_ADDRESS_STREET;
-    }
-
-    pub fn toggle_unit(&mut self) {
-        self.0 ^= LIBPOSTAL_ADDRESS_UNIT;
-    }
-
-    pub fn toggle_level(&mut self) {
-        self.0 ^= LIBPOSTAL_ADDRESS_LEVEL;
-    }
-
-    pub fn toggle_staircase(&mut self) {
-        self.0 ^= LIBPOSTAL_ADDRESS_STAIRCASE;
-    }
-
-    pub fn toggle_entrance(&mut self) {
-        self.0 ^= LIBPOSTAL_ADDRESS_ENTRANCE;
-    }
-
-    pub fn toggle_category(&mut self) {
-        self.0 ^= LIBPOSTAL_ADDRESS_CATEGORY;
-    }
-
-    pub fn toggle_near(&mut self) {
-        self.0 ^= LIBPOSTAL_ADDRESS_NEAR;
-    }
-
-    pub fn toggle_toponym(&mut self) {
-        self.0 ^= LIBPOSTAL_ADDRESS_TOPONYM;
-    }
-
-    pub fn toggle_postal_code(&mut self) {
-        self.0 ^= LIBPOSTAL_ADDRESS_POSTAL_CODE;
-    }
-
-    pub fn toggle_po_box(&mut self) {
-        self.0 ^= LIBPOSTAL_ADDRESS_PO_BOX;
-    }
-
-    pub fn toggle_all(&mut self) {
-        self.0 ^= LIBPOSTAL_ADDRESS_ALL;
+impl Default for AddressComponents {
+    /// Union of `NAME, HOUSE_NUMBER, STREET, PO_BOX, UNIT,
+    /// LEVEL, ENTRANCE, STAIRCASE, POSTAL_CODE`.
+    fn default() -> Self {
+        Self::NAME
+            | Self::HOUSE_NUMBER
+            | Self::STREET
+            | Self::PO_BOX
+            | Self::UNIT
+            | Self::LEVEL
+            | Self::ENTRANCE
+            | Self::STAIRCASE
+            | Self::POSTAL_CODE
     }
 }
+
 
 /// Normalization options.
 #[derive(Debug)]
@@ -198,7 +147,7 @@ impl<'a> NormalizeOptions<'a> {
             languages: None,
             language_c_strs: None,
             language_ptrs: None,
-            address_components: AddressComponents::new(),
+            address_components: Default::default(),
             latin_ascii: false,
             transliterate: false,
             strip_accents: false,
@@ -234,7 +183,7 @@ impl<'a> NormalizeOptions<'a> {
             options.languages = self.language_ptrs.as_mut().unwrap().as_mut_ptr();
             options.num_languages = langs.len() as libc::size_t;
         };
-        options.address_components = self.address_components.0;
+        options.address_components = self.address_components.bits;
         options.latin_ascii = self.latin_ascii;
         options.transliterate = self.transliterate;
         options.strip_accents = self.strip_accents;
@@ -296,19 +245,19 @@ mod test {
     use super::*;
 
     #[test]
-    fn toggle_address_components_new() {
-        let components = AddressComponents::new();
-        assert_eq!(components.0, LIBPOSTAL_ADDRESS_DEFAULT_COMPONENTS);
+    fn toggle_address_components_default() {
+        let components: AddressComponents = Default::default();
+        assert_eq!(components.bits, 0b1100000011111110);
+        assert_eq!(components, Default::default());
     }
 
     #[test]
     fn toggle_address_components_all() {
-        let mut components = AddressComponents::new();
-        components.0 = LIBPOSTAL_ADDRESS_NONE;
-        components.toggle_all();
-        assert_eq!(components.0, LIBPOSTAL_ADDRESS_ALL);
-        components.toggle_all();
-        assert_eq!(components.0, LIBPOSTAL_ADDRESS_NONE);
+        let mut components = AddressComponents::NONE;
+        components.toggle(AddressComponents::all());
+        assert_eq!(components.bits, AddressComponents::all().bits);
+        components.toggle(AddressComponents::all());
+        assert_eq!(components.bits, AddressComponents::NONE.bits);
     }
 
     #[test]
@@ -320,8 +269,8 @@ mod test {
         let options = NormalizeOptions::new(None);
         assert_eq!(options.languages, None);
         assert_eq!(
-            options.address_components.0,
-            LIBPOSTAL_ADDRESS_DEFAULT_COMPONENTS
+            options.address_components,
+            Default::default()
         );
         unsafe {
             ffi::libpostal_teardown_language_classifier();
