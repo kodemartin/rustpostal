@@ -22,10 +22,34 @@
 //! ```
 #![allow(unused)]
 
-use std::ffi::{CStr, CString};
 use bitflags::bitflags;
+use std::ffi::{CStr, CString};
 
 use crate::ffi;
+
+bitflags! {
+    #[derive(Default)]
+    pub struct StringOptions: u32 {
+        const TRANSLITERATE = 1 << 0;
+        const STRIP_ACCENTS = 1 << 1;
+        const DECOMPOSE = 1 << 2;
+        const LOWERCASE = 1 << 3;
+        const TRIM_STRING = 1 << 4;
+        const DROP_PARENTHETICALS = 1 << 5;
+        const REPLACE_NUMERIC_HYPHENS = 1 << 6;
+        const DELETE_NUMERIC_HYPHENS = 1 << 7;
+        const SPLIT_ALPHA_FROM_NUMERIC = 1 << 8;
+        const REPLACE_WORD_HYPHENS = 1 << 9;
+        const DELETE_WORD_HYPHENS = 1 << 10;
+        const DELETE_FINAL_PERIODS = 1 << 11;
+        const DELETE_ACRONYM_PERIODS = 1 << 12;
+        const DROP_ENGLISH_POSSESSIVES = 1 << 13;
+        const DELETE_APOSTROPHES = 1 << 14;
+        const EXPAND_NUMEX = 1 << 15;
+        const ROMAN_NUMERALS = 1 << 16;
+        const LATIN_ASCII = 1 << 17;
+    }
+}
 
 bitflags! {
     /// Bit set of active address components in normalization options.
@@ -63,33 +87,15 @@ impl Default for AddressComponents {
     }
 }
 
-
 /// Normalization options.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct NormalizeOptions<'a> {
     pub languages: Option<Vec<&'a str>>,
     language_c_strs: Option<Vec<CString>>,
     language_ptrs: Option<Vec<*const libc::c_char>>,
     pub address_components: AddressComponents,
     // String options
-    pub latin_ascii: bool,
-    pub transliterate: bool,
-    pub strip_accents: bool,
-    pub decompose: bool,
-    pub lowercase: bool,
-    pub trim_string: bool,
-    pub drop_parentheticals: bool,
-    pub replace_numeric_hyphens: bool,
-    pub delete_numeric_hyphens: bool,
-    pub split_alpha_from_numeric: bool,
-    pub replace_word_hyphens: bool,
-    pub delete_word_hyphens: bool,
-    pub delete_final_periods: bool,
-    pub delete_acronym_periods: bool,
-    pub drop_english_possessives: bool,
-    pub delete_apostrophes: bool,
-    pub expand_numex: bool,
-    pub roman_numerals: bool,
+    pub string_options: StringOptions,
 }
 
 impl<'a> NormalizeOptions<'a> {
@@ -105,68 +111,94 @@ impl<'a> NormalizeOptions<'a> {
     }
 
     fn get_default_options() -> NormalizeOptions<'a> {
-        let mut options = Self::initialize();
-        unsafe {
-            let ffi_options = ffi::libpostal_get_default_options();
-            if !ffi_options.languages.is_null() {
-                let mut languages = vec![];
-                for i in 0..ffi_options.num_languages {
-                    let language = CStr::from_ptr(*ffi_options.languages.add(i));
-                    languages.push(language.to_str().unwrap());
-                }
-                if languages.len() == 0 {
-                    options.languages = None;
-                } else {
-                    options.languages = Some(languages);
-                }
-            }
-            options.latin_ascii = ffi_options.latin_ascii;
-            options.transliterate = ffi_options.transliterate;
-            options.strip_accents = ffi_options.strip_accents;
-            options.decompose = ffi_options.decompose;
-            options.lowercase = ffi_options.lowercase;
-            options.trim_string = ffi_options.trim_string;
-            options.drop_parentheticals = ffi_options.drop_parentheticals;
-            options.replace_numeric_hyphens = ffi_options.replace_numeric_hyphens;
-            options.delete_numeric_hyphens = ffi_options.delete_numeric_hyphens;
-            options.split_alpha_from_numeric = ffi_options.split_alpha_from_numeric;
-            options.replace_word_hyphens = ffi_options.replace_word_hyphens;
-            options.delete_word_hyphens = ffi_options.delete_word_hyphens;
-            options.delete_final_periods = ffi_options.delete_final_periods;
-            options.delete_acronym_periods = ffi_options.delete_acronym_periods;
-            options.drop_english_possessives = ffi_options.drop_english_possessives;
-            options.delete_apostrophes = ffi_options.delete_apostrophes;
-            options.expand_numex = ffi_options.expand_numex;
-            options.roman_numerals = ffi_options.roman_numerals;
-        }
-        options
-    }
-
-    fn initialize() -> NormalizeOptions<'a> {
-        NormalizeOptions {
+        let mut options = NormalizeOptions {
             languages: None,
             language_c_strs: None,
             language_ptrs: None,
-            address_components: Default::default(),
-            latin_ascii: false,
-            transliterate: false,
-            strip_accents: false,
-            decompose: false,
-            lowercase: false,
-            trim_string: false,
-            drop_parentheticals: false,
-            replace_numeric_hyphens: false,
-            delete_numeric_hyphens: false,
-            split_alpha_from_numeric: false,
-            replace_word_hyphens: false,
-            delete_word_hyphens: false,
-            delete_final_periods: false,
-            delete_acronym_periods: false,
-            drop_english_possessives: false,
-            delete_apostrophes: false,
-            expand_numex: false,
-            roman_numerals: false,
+            address_components: AddressComponents::default(),
+            string_options: StringOptions::default(),
+        };
+        let ffi_options = unsafe { ffi::libpostal_get_default_options() };
+        let languages: Vec<&str> = unsafe {
+            Vec::from_raw_parts(
+                ffi_options.languages,
+                ffi_options.num_languages,
+                ffi_options.num_languages,
+            )
+            .into_iter()
+            .map(|ptr| unsafe { CStr::from_ptr(ptr).to_str().unwrap() })
+            .collect()
+        };
+        if languages.len() == 0 {
+            options.languages = None;
+        } else {
+            options.languages = Some(languages);
         }
+        options
+            .string_options
+            .set(StringOptions::LATIN_ASCII, ffi_options.latin_ascii);
+        options
+            .string_options
+            .set(StringOptions::TRANSLITERATE, ffi_options.transliterate);
+        options
+            .string_options
+            .set(StringOptions::STRIP_ACCENTS, ffi_options.strip_accents);
+        options
+            .string_options
+            .set(StringOptions::DECOMPOSE, ffi_options.decompose);
+        options
+            .string_options
+            .set(StringOptions::LOWERCASE, ffi_options.lowercase);
+        options
+            .string_options
+            .set(StringOptions::TRIM_STRING, ffi_options.trim_string);
+        options.string_options.set(
+            StringOptions::DROP_PARENTHETICALS,
+            ffi_options.drop_parentheticals,
+        );
+        options.string_options.set(
+            StringOptions::REPLACE_NUMERIC_HYPHENS,
+            ffi_options.replace_numeric_hyphens,
+        );
+        options.string_options.set(
+            StringOptions::DELETE_NUMERIC_HYPHENS,
+            ffi_options.delete_numeric_hyphens,
+        );
+        options.string_options.set(
+            StringOptions::SPLIT_ALPHA_FROM_NUMERIC,
+            ffi_options.split_alpha_from_numeric,
+        );
+        options.string_options.set(
+            StringOptions::REPLACE_WORD_HYPHENS,
+            ffi_options.replace_word_hyphens,
+        );
+        options.string_options.set(
+            StringOptions::DELETE_WORD_HYPHENS,
+            ffi_options.delete_word_hyphens,
+        );
+        options.string_options.set(
+            StringOptions::DELETE_FINAL_PERIODS,
+            ffi_options.delete_final_periods,
+        );
+        options.string_options.set(
+            StringOptions::DELETE_ACRONYM_PERIODS,
+            ffi_options.delete_acronym_periods,
+        );
+        options.string_options.set(
+            StringOptions::DROP_ENGLISH_POSSESSIVES,
+            ffi_options.drop_english_possessives,
+        );
+        options.string_options.set(
+            StringOptions::DELETE_APOSTROPHES,
+            ffi_options.delete_apostrophes,
+        );
+        options
+            .string_options
+            .set(StringOptions::EXPAND_NUMEX, ffi_options.expand_numex);
+        options
+            .string_options
+            .set(StringOptions::ROMAN_NUMERALS, ffi_options.roman_numerals);
+        options
     }
 
     unsafe fn as_libpostal_options(&mut self) -> ffi::libpostal_normalize_options {
@@ -184,24 +216,44 @@ impl<'a> NormalizeOptions<'a> {
             options.num_languages = langs.len() as libc::size_t;
         };
         options.address_components = self.address_components.bits;
-        options.latin_ascii = self.latin_ascii;
-        options.transliterate = self.transliterate;
-        options.strip_accents = self.strip_accents;
-        options.decompose = self.decompose;
-        options.lowercase = self.lowercase;
-        options.trim_string = self.trim_string;
-        options.drop_parentheticals = self.drop_parentheticals;
-        options.replace_numeric_hyphens = self.replace_numeric_hyphens;
-        options.delete_numeric_hyphens = self.delete_numeric_hyphens;
-        options.split_alpha_from_numeric = self.split_alpha_from_numeric;
-        options.replace_word_hyphens = self.replace_word_hyphens;
-        options.delete_word_hyphens = self.delete_word_hyphens;
-        options.delete_final_periods = self.delete_final_periods;
-        options.delete_acronym_periods = self.delete_acronym_periods;
-        options.drop_english_possessives = self.drop_english_possessives;
-        options.delete_apostrophes = self.delete_apostrophes;
-        options.expand_numex = self.expand_numex;
-        options.roman_numerals = self.roman_numerals;
+        options.latin_ascii = self.string_options.contains(StringOptions::LATIN_ASCII);
+        options.transliterate = self.string_options.contains(StringOptions::TRANSLITERATE);
+        options.strip_accents = self.string_options.contains(StringOptions::STRIP_ACCENTS);
+        options.decompose = self.string_options.contains(StringOptions::DECOMPOSE);
+        options.lowercase = self.string_options.contains(StringOptions::LOWERCASE);
+        options.trim_string = self.string_options.contains(StringOptions::TRIM_STRING);
+        options.drop_parentheticals = self
+            .string_options
+            .contains(StringOptions::DROP_PARENTHETICALS);
+        options.replace_numeric_hyphens = self
+            .string_options
+            .contains(StringOptions::REPLACE_NUMERIC_HYPHENS);
+        options.delete_numeric_hyphens = self
+            .string_options
+            .contains(StringOptions::DELETE_NUMERIC_HYPHENS);
+        options.split_alpha_from_numeric = self
+            .string_options
+            .contains(StringOptions::SPLIT_ALPHA_FROM_NUMERIC);
+        options.replace_word_hyphens = self
+            .string_options
+            .contains(StringOptions::REPLACE_WORD_HYPHENS);
+        options.delete_word_hyphens = self
+            .string_options
+            .contains(StringOptions::DELETE_WORD_HYPHENS);
+        options.delete_final_periods = self
+            .string_options
+            .contains(StringOptions::DELETE_FINAL_PERIODS);
+        options.delete_acronym_periods = self
+            .string_options
+            .contains(StringOptions::DELETE_ACRONYM_PERIODS);
+        options.drop_english_possessives = self
+            .string_options
+            .contains(StringOptions::DROP_ENGLISH_POSSESSIVES);
+        options.delete_apostrophes = self
+            .string_options
+            .contains(StringOptions::DELETE_APOSTROPHES);
+        options.expand_numex = self.string_options.contains(StringOptions::EXPAND_NUMEX);
+        options.roman_numerals = self.string_options.contains(StringOptions::ROMAN_NUMERALS);
         options
     }
 }
@@ -268,10 +320,7 @@ mod test {
         }
         let options = NormalizeOptions::new(None);
         assert_eq!(options.languages, None);
-        assert_eq!(
-            options.address_components,
-            Default::default()
-        );
+        assert_eq!(options.address_components, Default::default());
         unsafe {
             ffi::libpostal_teardown_language_classifier();
             ffi::libpostal_teardown();
