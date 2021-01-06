@@ -204,14 +204,15 @@ impl<'a> NormalizeOptions<'a> {
     unsafe fn as_libpostal_options(&mut self) -> ffi::libpostal_normalize_options {
         let mut options = ffi::libpostal_get_default_options();
         if let Some(langs) = self.languages.as_ref() {
-            self.language_c_strs = Some(vec![]);
-            self.language_ptrs = Some(vec![]);
-            let c_str = self.language_c_strs.as_mut().unwrap();
-            let ptrs = self.language_ptrs.as_mut().unwrap();
-            for (i, language) in langs.iter().enumerate() {
-                c_str.push(CString::new(*language).unwrap());
-                ptrs.push(c_str[i].as_ptr());
+            let mut cstrings = Vec::with_capacity(langs.len());
+            let mut ptrs = Vec::with_capacity(langs.len());
+            for language in langs {
+                let cstring = CString::new(*language).unwrap();
+                ptrs.push(cstring.as_ptr());
+                cstrings.push(cstring);
             }
+            self.language_c_strs = Some(cstrings);
+            self.language_ptrs = Some(ptrs);
             options.languages = self.language_ptrs.as_mut().unwrap().as_mut_ptr();
             options.num_languages = langs.len() as libc::size_t;
         };
