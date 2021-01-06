@@ -98,19 +98,8 @@ pub struct NormalizeOptions<'a> {
     pub string_options: StringOptions,
 }
 
-impl<'a> NormalizeOptions<'a> {
-    /// Create new instance with default options.
-    ///
-    /// `languages` override the respective option field, if given.
-    pub fn new(languages: Option<Vec<&'a str>>) -> NormalizeOptions<'a> {
-        let mut options = Self::get_default_options();
-        if languages.is_some() {
-            options.languages = languages;
-        }
-        options
-    }
-
-    fn get_default_options() -> NormalizeOptions<'a> {
+impl<'a> Default for NormalizeOptions<'a> {
+    fn default() -> NormalizeOptions<'a> {
         let mut options = NormalizeOptions {
             languages: None,
             language_c_strs: None,
@@ -198,6 +187,19 @@ impl<'a> NormalizeOptions<'a> {
         options
             .string_options
             .set(StringOptions::ROMAN_NUMERALS, ffi_options.roman_numerals);
+        options
+    }
+}
+
+impl<'a> NormalizeOptions<'a> {
+    /// Create new instance with default options.
+    ///
+    /// `languages` override the respective option field, if given.
+    pub fn new(languages: Option<Vec<&'a str>>) -> NormalizeOptions<'a> {
+        let mut options = NormalizeOptions::default();
+        if languages.is_some() {
+            options.languages = languages;
+        }
         options
     }
 
