@@ -269,30 +269,23 @@ pub fn expand_address(address: &str) -> Vec<String> {
 /// Normalize address with optional user-defined languages.
 pub fn expand_address_with_options(address: &str, languages: Option<Vec<&str>>) -> Vec<String> {
     let address = CString::new(address).unwrap();
-    let mut expanded: Vec<String> = Vec::new();
-    let mut rust_options: NormalizeOptions;
+    let mut rust_options = NormalizeOptions::new(languages);
+    let mut n: libc::size_t = 0;
 
     unsafe {
-        let options: ffi::libpostal_normalize_options;
-        if languages.is_some() {
-            rust_options = NormalizeOptions::new(languages);
-            options = rust_options.as_libpostal_options();
-        } else {
-            options = ffi::libpostal_get_default_options();
-        }
-        let mut n: libc::size_t = 0;
-        let n = &mut n as *mut libc::size_t;
+        let options = rust_options.as_libpostal_options();
         let raw =
-            ffi::libpostal_expand_address(address.as_ptr() as *const libc::c_char, options, n);
-        for i in 0..*n {
+            ffi::libpostal_expand_address(address.as_ptr() as *const libc::c_char, options, &mut n);
+        let mut expanded = Vec::with_capacity(n);
+        for i in 0..n {
             if let Some(phrase) = raw.add(i).as_ref() {
                 let normalized = CStr::from_ptr(*phrase);
                 expanded.push(String::from(normalized.to_str().unwrap()));
             };
         }
-        ffi::libpostal_expansion_array_destroy(raw, *n);
+        ffi::libpostal_expansion_array_destroy(raw, n);
+        expanded
     }
-    expanded
 }
 
 #[cfg(test)]
