@@ -24,6 +24,9 @@
 
 use bitflags::bitflags;
 use std::ffi::{CStr, CString};
+use std::iter::Iterator;
+
+use libc::{c_char, size_t};
 
 use crate::ffi;
 
