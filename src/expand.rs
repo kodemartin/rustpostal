@@ -82,111 +82,142 @@ struct LibpostalNormalizeOptions {
 }
 
 /// Normalization options.
-pub struct NormalizeOptions<'a, T: Iterator<Item=&'a str>> {
+pub struct NormalizeOptions<'a, T: Iterator<Item = &'a str>> {
     pub languages: Option<T>,
     pub address_components: AddressComponents,
     pub string_options: StringOptions,
     libpostal_options: LibpostalNormalizeOptions,
 }
 
-impl<'a> Default for NormalizeOptions<'a> {
-    fn default() -> NormalizeOptions<'a> {
-        let mut options = NormalizeOptions {
-            languages: None,
-            language_c_strs: None,
-            language_ptrs: None,
-            address_components: AddressComponents::default(),
-            string_options: StringOptions::default(),
-        };
-        let ffi_options = unsafe { ffi::libpostal_get_default_options() };
-        let languages: Vec<&str> = unsafe {
-            Vec::from_raw_parts(
-                ffi_options.languages,
-                ffi_options.num_languages,
-                ffi_options.num_languages,
-            )
-            .into_iter()
-            .map(|ptr| unsafe { CStr::from_ptr(ptr).to_str().unwrap() })
-            .collect()
-        };
-        if languages.len() == 0 {
-            options.languages = None;
-        } else {
-            options.languages = Some(languages);
+/// Collections of normalized variations of postal address.
+pub struct NormalizedAddress {
+    variations: Vec<String>,
+    n: size_t,
+}
+
+impl LibpostalNormalizeOptions {
+    /// Access the inner ffi options
+    fn inner_mut(&mut self) -> &mut ffi::libpostal_normalize_options {
+        self.ffi
+            .get_or_insert(unsafe { ffi::libpostal_get_default_options() })
+    }
+
+    /// Free pointers to language options.
+    fn free_lang_ptrs(&mut self) {
+        let c_strings_buffered = self.lang_buffer.as_mut().is_some();
+        let ffi = self.inner_mut();
+        unsafe {
+            for i in 0..ffi.num_languages {
+                let ptr = ffi.languages.add(i);
+                if (c_strings_buffered) {
+                    let cstring = CString::from_raw(*ptr as *mut c_char);
+                } else {
+                    libc::free(*ptr as *mut libc::c_void);
+                }
+            }
         }
-        options
-            .string_options
-            .set(StringOptions::LATIN_ASCII, ffi_options.latin_ascii);
-        options
-            .string_options
-            .set(StringOptions::TRANSLITERATE, ffi_options.transliterate);
-        options
-            .string_options
-            .set(StringOptions::STRIP_ACCENTS, ffi_options.strip_accents);
-        options
-            .string_options
-            .set(StringOptions::DECOMPOSE, ffi_options.decompose);
-        options
-            .string_options
-            .set(StringOptions::LOWERCASE, ffi_options.lowercase);
-        options
-            .string_options
-            .set(StringOptions::TRIM_STRING, ffi_options.trim_string);
-        options.string_options.set(
-            StringOptions::DROP_PARENTHETICALS,
-            ffi_options.drop_parentheticals,
-        );
-        options.string_options.set(
-            StringOptions::REPLACE_NUMERIC_HYPHENS,
-            ffi_options.replace_numeric_hyphens,
-        );
-        options.string_options.set(
-            StringOptions::DELETE_NUMERIC_HYPHENS,
-            ffi_options.delete_numeric_hyphens,
-        );
-        options.string_options.set(
-            StringOptions::SPLIT_ALPHA_FROM_NUMERIC,
-            ffi_options.split_alpha_from_numeric,
-        );
-        options.string_options.set(
-            StringOptions::REPLACE_WORD_HYPHENS,
-            ffi_options.replace_word_hyphens,
-        );
-        options.string_options.set(
-            StringOptions::DELETE_WORD_HYPHENS,
-            ffi_options.delete_word_hyphens,
-        );
-        options.string_options.set(
-            StringOptions::DELETE_FINAL_PERIODS,
-            ffi_options.delete_final_periods,
-        );
-        options.string_options.set(
-            StringOptions::DELETE_ACRONYM_PERIODS,
-            ffi_options.delete_acronym_periods,
-        );
-        options.string_options.set(
-            StringOptions::DROP_ENGLISH_POSSESSIVES,
-            ffi_options.drop_english_possessives,
-        );
-        options.string_options.set(
-            StringOptions::DELETE_APOSTROPHES,
-            ffi_options.delete_apostrophes,
-        );
-        options
-            .string_options
-            .set(StringOptions::EXPAND_NUMEX, ffi_options.expand_numex);
-        options
-            .string_options
-            .set(StringOptions::ROMAN_NUMERALS, ffi_options.roman_numerals);
-        options
+    }
+
+    /// Update string options in ffi.
+    fn update_string_options(&mut self, string_options: &StringOptions) {
+        let (src, dst) = (self.inner_mut(), string_options);
+        src.latin_ascii = dst.contains(StringOptions::LATIN_ASCII);
+        src.transliterate = dst.contains(StringOptions::TRANSLITERATE);
+        src.strip_accents = dst.contains(StringOptions::STRIP_ACCENTS);
+        src.decompose = dst.contains(StringOptions::DECOMPOSE);
+        src.lowercase = dst.contains(StringOptions::LOWERCASE);
+        src.trim_string = dst.contains(StringOptions::TRIM_STRING);
+        src.drop_parentheticals = dst.contains(StringOptions::DROP_PARENTHETICALS);
+        src.replace_numeric_hyphens = dst.contains(StringOptions::REPLACE_NUMERIC_HYPHENS);
+        src.delete_numeric_hyphens = dst.contains(StringOptions::DELETE_NUMERIC_HYPHENS);
+        src.split_alpha_from_numeric = dst.contains(StringOptions::SPLIT_ALPHA_FROM_NUMERIC);
+        src.replace_word_hyphens = dst.contains(StringOptions::REPLACE_WORD_HYPHENS);
+        src.delete_word_hyphens = dst.contains(StringOptions::DELETE_WORD_HYPHENS);
+        src.delete_final_periods = dst.contains(StringOptions::DELETE_FINAL_PERIODS);
+        src.delete_acronym_periods = dst.contains(StringOptions::DELETE_ACRONYM_PERIODS);
+        src.drop_english_possessives = dst.contains(StringOptions::DROP_ENGLISH_POSSESSIVES);
+        src.delete_apostrophes = dst.contains(StringOptions::DELETE_APOSTROPHES);
+        src.expand_numex = dst.contains(StringOptions::EXPAND_NUMEX);
+        src.roman_numerals = dst.contains(StringOptions::ROMAN_NUMERALS);
+    }
+
+    /// Update address components in ffi.
+    fn update_address_components(&mut self, address_components: &AddressComponents) {
+        self.inner_mut().address_components = address_components.bits;
+    }
+
+    /// Update languages in ffi.
+    fn update_languages<'a, T: Iterator<Item = &'a str>>(&mut self, languages: &mut T) {
+        if self.lang_buffer.is_some() {
+            return;
+        }
+        self.free_lang_ptrs();
+        let mut lang_buffer: Vec<*const c_char> = languages
+            .by_ref()
+            .map(|s| CString::new(s).unwrap().into_raw() as *const c_char)
+            .collect();
+        let ffi = self.inner_mut();
+        ffi.languages = lang_buffer.as_mut_ptr();
+        ffi.num_languages = lang_buffer.len();
+        self.lang_buffer = Some(lang_buffer);
+    }
+
+    /// Normalize address.
+    fn expand(&mut self, address: &str) -> NormalizedAddress {
+        let address = address.as_ptr() as *const c_char;
+        let mut result: NormalizedAddress = Default::default();
+        let options = self.ffi.take().unwrap();
+        let raw = unsafe { ffi::libpostal_expand_address(address, options, &mut result.n) };
+        result.variations = Vec::with_capacity(result.n);
+        unsafe {
+            for i in 0..result.n {
+                if let Some(phrase) = raw.add(i).as_ref() {
+                    let variation = CStr::from_ptr(*phrase);
+                    result
+                        .variations
+                        .push(String::from(variation.to_str().unwrap()));
+                };
+            }
+            ffi::libpostal_expansion_array_destroy(raw, result.n);
+        }
+        result
     }
 }
 
-impl<'a> NormalizeOptions<'a> {
+impl Default for LibpostalNormalizeOptions {
+    fn default() -> Self {
+        LibpostalNormalizeOptions {
+            ffi: Some(unsafe { ffi::libpostal_get_default_options() }),
+            lang_buffer: Default::default(),
+        }
+    }
+}
+
+impl Drop for LibpostalNormalizeOptions {
+    fn drop(&mut self) {
+        self.free_lang_ptrs();
+    }
+}
+
+impl<'a, T> Default for NormalizeOptions<'a, T>
+where
+    T: Iterator<Item = &'a str>,
+{
+    fn default() -> Self {
+        NormalizeOptions {
+            languages: Default::default(),
+            address_components: Default::default(),
+            string_options: Default::default(),
+            libpostal_options: Default::default(),
+        }
+    }
+}
+
+impl<'a, T: Iterator<Item = &'a str>> NormalizeOptions<'a, T> {
     /// Create new instance with default options.
     ///
     /// `languages` override the respective option field, if given.
-    pub fn new(languages: Option<Vec<&'a str>>) -> NormalizeOptions<'a> {
+    pub fn new(languages: Option<T>) -> NormalizeOptions<'a, T> {
         let mut options = NormalizeOptions::default();
         if languages.is_some() {
             options.languages = languages;
@@ -194,150 +225,119 @@ impl<'a> NormalizeOptions<'a> {
         options
     }
 
-    unsafe fn as_libpostal_options(&mut self) -> ffi::libpostal_normalize_options {
-        let mut options = ffi::libpostal_get_default_options();
-        if let Some(langs) = self.languages.as_ref() {
-            let mut cstrings = Vec::with_capacity(langs.len());
-            let mut ptrs = Vec::with_capacity(langs.len());
-            for language in langs {
-                let cstring = CString::new(*language).unwrap();
-                ptrs.push(cstring.as_ptr());
-                cstrings.push(cstring);
-            }
-            self.language_c_strs = Some(cstrings);
-            self.language_ptrs = Some(ptrs);
-            options.languages = self.language_ptrs.as_mut().unwrap().as_mut_ptr();
-            options.num_languages = langs.len() as libc::size_t;
-        };
-        options.address_components = self.address_components.bits;
-        options.latin_ascii = self.string_options.contains(StringOptions::LATIN_ASCII);
-        options.transliterate = self.string_options.contains(StringOptions::TRANSLITERATE);
-        options.strip_accents = self.string_options.contains(StringOptions::STRIP_ACCENTS);
-        options.decompose = self.string_options.contains(StringOptions::DECOMPOSE);
-        options.lowercase = self.string_options.contains(StringOptions::LOWERCASE);
-        options.trim_string = self.string_options.contains(StringOptions::TRIM_STRING);
-        options.drop_parentheticals = self
-            .string_options
-            .contains(StringOptions::DROP_PARENTHETICALS);
-        options.replace_numeric_hyphens = self
-            .string_options
-            .contains(StringOptions::REPLACE_NUMERIC_HYPHENS);
-        options.delete_numeric_hyphens = self
-            .string_options
-            .contains(StringOptions::DELETE_NUMERIC_HYPHENS);
-        options.split_alpha_from_numeric = self
-            .string_options
-            .contains(StringOptions::SPLIT_ALPHA_FROM_NUMERIC);
-        options.replace_word_hyphens = self
-            .string_options
-            .contains(StringOptions::REPLACE_WORD_HYPHENS);
-        options.delete_word_hyphens = self
-            .string_options
-            .contains(StringOptions::DELETE_WORD_HYPHENS);
-        options.delete_final_periods = self
-            .string_options
-            .contains(StringOptions::DELETE_FINAL_PERIODS);
-        options.delete_acronym_periods = self
-            .string_options
-            .contains(StringOptions::DELETE_ACRONYM_PERIODS);
-        options.drop_english_possessives = self
-            .string_options
-            .contains(StringOptions::DROP_ENGLISH_POSSESSIVES);
-        options.delete_apostrophes = self
-            .string_options
-            .contains(StringOptions::DELETE_APOSTROPHES);
-        options.expand_numex = self.string_options.contains(StringOptions::EXPAND_NUMEX);
-        options.roman_numerals = self.string_options.contains(StringOptions::ROMAN_NUMERALS);
+    /// Add string option.
+    pub fn add_string_option(&mut self, option: StringOptions) {
+        self.string_options.insert(option);
+    }
+
+    /// Add address component option.
+    pub fn add_address_component(&mut self, component: AddressComponents) {
+        self.address_components.insert(component);
+    }
+
+    /// Create libpostal options.
+    fn libpostal_options(&mut self) -> LibpostalNormalizeOptions {
+        let mut options: LibpostalNormalizeOptions = Default::default();
+        options.update_string_options(&self.string_options);
+        options.update_address_components(&self.address_components);
+        if let Some(languages) = &mut self.languages {
+            options.update_languages(languages);
+        }
         options
+    }
+
+    /// Expand address.
+    pub fn expand(&mut self, address: &str) -> NormalizedAddress {
+        let mut options = self.libpostal_options();
+        options.expand(address)
+    }
+}
+
+impl Default for NormalizedAddress {
+    fn default() -> Self {
+        NormalizedAddress {
+            variations: Vec::new(),
+            n: 0,
+        }
     }
 }
 
 /// Normalize address with default options.
-pub fn expand_address(address: &str) -> Vec<String> {
-    expand_address_with_options(address, None)
-}
+/// pub fn expand_address<'a, T>(address: &'a str) -> T
+///     where T: Iterator<Item = &'a str>
+/// {
+///     expand_address_with_options(address, None)
+/// }
+
 
 /// Normalize address with optional user-defined languages.
-pub fn expand_address_with_options(address: &str, languages: Option<Vec<&str>>) -> Vec<String> {
-    let address = CString::new(address).unwrap();
-    let mut rust_options = NormalizeOptions::new(languages);
-    let mut n: libc::size_t = 0;
-
-    unsafe {
-        let options = rust_options.as_libpostal_options();
-        let raw =
-            ffi::libpostal_expand_address(address.as_ptr() as *const libc::c_char, options, &mut n);
-        let mut expanded = Vec::with_capacity(n);
-        for i in 0..n {
-            if let Some(phrase) = raw.add(i).as_ref() {
-                let normalized = CStr::from_ptr(*phrase);
-                expanded.push(String::from(normalized.to_str().unwrap()));
-            };
-        }
-        ffi::libpostal_expansion_array_destroy(raw, n);
-        expanded
-    }
-}
+/// pub fn expand_address_with_options<'a, T>(address: &'a str, languages: Option<T>) -> T 
+///     where T: Iterator<Item=&'a str>
+/// {
+///     let address = CString::new(address).unwrap();
+///     let mut rust_options = NormalizeOptions::new(languages);
+///     let mut n: libc::size_t = 0;
+/// 
+///     unsafe {
+///         let options = rust_options.as_libpostal_options();
+///         let raw =
+///             ffi::libpostal_expand_address(address.as_ptr() as *const libc::c_char, options, &mut n);
+///         let mut expanded = Vec::with_capacity(n);
+///         for i in 0..n {
+///             if let Some(phrase) = raw.add(i).as_ref() {
+///                 let normalized = CStr::from_ptr(*phrase);
+///                 expanded.push(String::from(normalized.to_str().unwrap()));
+///             };
+///         }
+///         ffi::libpostal_expansion_array_destroy(raw, n);
+///         expanded
+///     }
+/// }
 
 #[cfg(test)]
 mod test {
     use super::*;
 
     #[test]
-    fn toggle_address_components_default() {
-        let components: AddressComponents = Default::default();
-        assert_eq!(components.bits, 0b1100000011111110);
-        assert_eq!(components, Default::default());
+    fn default_libpostal_normalize_options() {
+        let mut options: LibpostalNormalizeOptions = Default::default();
+        assert!(options.ffi.is_some());
+        assert_eq!(*(&options.ffi.as_ref().unwrap().num_languages), 0);
+        assert!(options.lang_buffer.is_none());
     }
 
     #[test]
-    fn toggle_address_components_all() {
-        let mut components = AddressComponents::NONE;
-        components.toggle(AddressComponents::all());
-        assert_eq!(components.bits, AddressComponents::all().bits);
-        components.toggle(AddressComponents::all());
-        assert_eq!(components.bits, AddressComponents::NONE.bits);
-    }
-
-    #[test]
-    fn normalized_options_new() {
-        unsafe {
-            ffi::libpostal_setup();
-            ffi::libpostal_setup_language_classifier();
-        }
-        let options = NormalizeOptions::new(None);
-        assert_eq!(options.languages, None);
-        assert_eq!(options.address_components, Default::default());
-        unsafe {
-            ffi::libpostal_teardown_language_classifier();
-            ffi::libpostal_teardown();
-        }
-    }
-
-    #[test]
-    fn normalized_options_new_with_languages() {
-        unsafe {
-            ffi::libpostal_setup();
-            ffi::libpostal_setup_language_classifier();
-        }
-        let languages = vec!["en", "gr"];
-        let mut options = NormalizeOptions::new(Some(languages.clone()));
-        let ffi_options: ffi::libpostal_normalize_options;
-        unsafe {
-            ffi_options = options.as_libpostal_options();
-            let mut ffi_languages = vec![];
-            for i in 0..ffi_options.num_languages {
-                ffi_languages.push(
-                    CStr::from_ptr(*ffi_options.languages.add(i))
-                        .to_str()
-                        .unwrap(),
-                );
+    fn libpostal_normalize_options_update_languages() {
+        let mut languages = ["en", "gr"];
+        let mut options: LibpostalNormalizeOptions = Default::default();
+        options.update_languages(&mut languages.iter().by_ref().map(|l| *l));
+        let ffi = &options.ffi.as_ref().unwrap();
+        for i in 0..ffi.num_languages {
+            unsafe {
+                let ptr = ffi.languages.add(i);
+                let cstr = CStr::from_ptr(*ptr);
+                assert_eq!(cstr.to_str(), Ok(languages[i]));
             }
-            assert_eq!(languages, ffi_languages);
         }
-        unsafe {
-            ffi::libpostal_teardown_language_classifier();
-            ffi::libpostal_teardown();
-        }
+    }
+
+    #[test]
+    fn libpostal_normalize_options_update_string_options() {
+        let mut options: LibpostalNormalizeOptions = Default::default();
+        let s_options = StringOptions::TRANSLITERATE | StringOptions::LOWERCASE;
+        options.update_string_options(&s_options);
+        let ffi = &options.ffi.as_ref().unwrap();
+        assert!(ffi.transliterate);
+        assert!(ffi.lowercase);
+        assert!(!ffi.latin_ascii);
+    }
+
+    #[test]
+    fn libpostal_normalize_options_update_address_components() {
+        let mut options: LibpostalNormalizeOptions = Default::default();
+        let components = AddressComponents::NAME | AddressComponents::LEVEL;
+        options.update_address_components(&components);
+        let ffi = &options.ffi.as_ref().unwrap();
+        assert_eq!(ffi.address_components, components.bits);
     }
 }
