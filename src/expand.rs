@@ -82,14 +82,11 @@ struct LibpostalNormalizeOptions {
 }
 
 /// Normalization options.
-#[derive(Clone, Debug)]
-pub struct NormalizeOptions<'a> {
-    pub languages: Option<Vec<&'a str>>,
-    language_c_strs: Option<Vec<CString>>,
-    language_ptrs: Option<Vec<*const libc::c_char>>,
+pub struct NormalizeOptions<'a, T: Iterator<Item=&'a str>> {
+    pub languages: Option<T>,
     pub address_components: AddressComponents,
-    // String options
     pub string_options: StringOptions,
+    libpostal_options: LibpostalNormalizeOptions,
 }
 
 impl<'a> Default for NormalizeOptions<'a> {
