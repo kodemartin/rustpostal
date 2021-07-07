@@ -31,6 +31,7 @@ use libc::{c_char, size_t};
 use crate::ffi;
 
 bitflags! {
+    /// Bit set of active string options.
     #[derive(Default)]
     pub struct StringOptions: u32 {
         const TRANSLITERATE = 1 << 0;
