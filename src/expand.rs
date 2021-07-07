@@ -75,6 +75,12 @@ bitflags! {
         }
 }
 
+/// Wrap the options to pass to the C library.
+struct LibpostalNormalizeOptions {
+    ffi: Option<ffi::libpostal_normalize_options>,
+    lang_buffer: Option<Vec<*const c_char>>,
+}
+
 /// Normalization options.
 #[derive(Clone, Debug)]
 pub struct NormalizeOptions<'a> {
