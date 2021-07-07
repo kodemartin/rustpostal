@@ -56,6 +56,7 @@ bitflags! {
 
 bitflags! {
     /// Bit set of active address components in normalization options.
+    #[derive(Default)]
     pub struct AddressComponents: u16 {
         const NONE = 0;
         const ANY = 1 << 0;
@@ -72,22 +73,6 @@ bitflags! {
         const POSTAL_CODE = 1 << 14;
         const PO_BOX = 1 << 15;
         }
-}
-
-impl Default for AddressComponents {
-    /// Union of `NAME, HOUSE_NUMBER, STREET, PO_BOX, UNIT,
-    /// LEVEL, ENTRANCE, STAIRCASE, POSTAL_CODE`.
-    fn default() -> Self {
-        Self::NAME
-            | Self::HOUSE_NUMBER
-            | Self::STREET
-            | Self::PO_BOX
-            | Self::UNIT
-            | Self::LEVEL
-            | Self::ENTRANCE
-            | Self::STAIRCASE
-            | Self::POSTAL_CODE
-    }
 }
 
 /// Normalization options.
