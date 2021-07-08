@@ -164,11 +164,11 @@ impl LibpostalNormalizeOptions {
     }
 
     /// Normalize address.
-    fn expand(&mut self, address: &str) -> NormalizedAddress {
-        let address = address.as_ptr() as *const c_char;
+    fn expand(&mut self, address: &CStr) -> NormalizedAddress {
         let mut result: NormalizedAddress = Default::default();
         let options = self.ffi.take().unwrap();
-        let raw = unsafe { ffi::libpostal_expand_address(address, options, &mut result.n) };
+        let raw =
+            unsafe { ffi::libpostal_expand_address(address.as_ptr(), options, &mut result.n) };
         result.variations = Vec::with_capacity(result.n);
         unsafe {
             for i in 0..result.n {
@@ -250,7 +250,8 @@ impl<'a, T: Iterator<Item = &'a str>> NormalizeOptions<'a, T> {
     /// Expand address.
     pub fn expand(&mut self, address: &str) -> NormalizedAddress {
         let mut options = self.libpostal_options();
-        options.expand(address)
+        let c_address = CString::new(address).unwrap();
+        options.expand(&c_address)
     }
 }
 
@@ -298,6 +299,7 @@ impl Default for NormalizedAddress {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::{setup, teardown, LibModules};
 
     #[test]
     fn default_libpostal_normalize_options() {
@@ -340,5 +342,24 @@ mod test {
         options.update_address_components(&components);
         let ffi = &options.ffi.as_ref().unwrap();
         assert_eq!(ffi.address_components, components.bits);
+    }
+
+    #[test]
+    fn libpostal_normalize_options_expand() {
+        unsafe { setup(LibModules::Expand) }
+
+        let address = "St Johns Centre, Rope Walk, Bedford, Bedfordshire, MK42 0XE, United Kingdom";
+        let c_address = CString::new(address).unwrap();
+
+        let mut libpostal_options: LibpostalNormalizeOptions = Default::default();
+
+        let expanded = libpostal_options.expand(&c_address);
+
+        assert!(expanded.n > 0);
+        for variation in expanded.variations {
+            assert!(variation.ends_with("kingdom"));
+        }
+
+        unsafe { teardown(LibModules::Expand) }
     }
 }
