@@ -264,6 +264,38 @@ impl Default for NormalizedAddress {
     }
 }
 
+impl NormalizedAddress {
+    /// Returns an iterator over the variations
+    /// of the normalized address.
+    pub fn iter(&self) -> std::slice::Iter<String> {
+        self.variations.as_slice().iter()
+    }
+
+    /// Returns an iterator that allows modifying variations
+    /// of the normalized address.
+    pub fn iter_mut(&mut self) -> std::slice::IterMut<String> {
+        self.variations.as_mut_slice().iter_mut()
+    }
+}
+
+impl<'a> IntoIterator for &'a NormalizedAddress {
+    type Item = &'a String;
+    type IntoIter = std::slice::Iter<'a, String>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a mut NormalizedAddress {
+    type Item = &'a mut String;
+    type IntoIter = std::slice::IterMut<'a, String>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter_mut()
+    }
+}
+
 /// Normalize address with default options.
 /// pub fn expand_address<'a, T>(address: &'a str) -> T
 ///     where T: Iterator<Item = &'a str>
@@ -271,15 +303,14 @@ impl Default for NormalizedAddress {
 ///     expand_address_with_options(address, None)
 /// }
 
-
 /// Normalize address with optional user-defined languages.
-/// pub fn expand_address_with_options<'a, T>(address: &'a str, languages: Option<T>) -> T 
+/// pub fn expand_address_with_options<'a, T>(address: &'a str, languages: Option<T>) -> T
 ///     where T: Iterator<Item=&'a str>
 /// {
 ///     let address = CString::new(address).unwrap();
 ///     let mut rust_options = NormalizeOptions::new(languages);
 ///     let mut n: libc::size_t = 0;
-/// 
+///
 ///     unsafe {
 ///         let options = rust_options.as_libpostal_options();
 ///         let raw =
@@ -356,10 +387,59 @@ mod test {
         let expanded = libpostal_options.expand(&c_address);
 
         assert!(expanded.n > 0);
-        for variation in expanded.variations {
+        for variation in &expanded.variations {
+            assert!(variation.ends_with("kingdom"));
+        }
+
+        for variation in &expanded {
             assert!(variation.ends_with("kingdom"));
         }
 
         unsafe { teardown(LibModules::Expand) }
+    }
+
+    #[test]
+    fn normalized_address_iter() {
+        let mut normalized = NormalizedAddress::default();
+        normalized.variations.push(String::from("wat"));
+        normalized.variations.push(String::from("what"));
+        let mut iterator = normalized.iter();
+
+        assert_eq!(iterator.next(), Some(&String::from("wat")));
+        assert_eq!(iterator.next(), Some(&String::from("what")));
+        assert_eq!(iterator.next(), None);
+    }
+
+    #[test]
+    fn normalized_address_iter_mut() {
+        let mut normalized = NormalizedAddress::default();
+        normalized.variations.push(String::from("wat"));
+        normalized.variations.push(String::from("what"));
+
+        for variation in normalized.iter_mut() {
+            variation.push_str(" else");
+        }
+
+        let mut iterator = normalized.iter_mut();
+        assert_eq!(iterator.next(), Some(&mut String::from("wat else")));
+        assert_eq!(iterator.next(), Some(&mut String::from("what else")));
+        assert_eq!(iterator.next(), None);
+    }
+
+    #[test]
+    fn normalized_address_mut_into_iter() {
+        let mut normalized = NormalizedAddress::default();
+        let variations = ["wat", "what"];
+        for variation in &variations {
+            normalized.variations.push(String::from(*variation))
+        }
+        for variation in &mut normalized {
+            variation.push_str(" else");
+        }
+
+        let expected = ["wat else", "what else"];
+        for (i, variation) in normalized.iter().enumerate() {
+            assert_eq!(variation.as_str(), expected[i]);
+        }
     }
 }
