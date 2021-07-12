@@ -97,20 +97,20 @@ struct LibpostalNormalizeOptions {
 ///
 /// let languages = ["en", "gb"];
 /// let mut options = NormalizeOptions::new(Some(languages.iter().map(|&s| s)));
-/// assert_eq!(options.languages, Some(languages.to_vec()));
+/// assert_eq!(options.languages(), Some(&languages[..]));
 ///
 /// let s_options = StringOptions::TRANSLITERATE | StringOptions::LOWERCASE;
 /// let components = AddressComponents::NAME | AddressComponents::LEVEL;
 ///
 /// options.add_string_option(s_options);
-/// assert!(options.string_options.contains(s_options));
+/// assert!(options.string_options().contains(s_options));
 ///
 /// options.add_address_component(components);
-/// assert!(options.address_components.contains(components));
+/// assert!(options.address_components().contains(components));
 pub struct NormalizeOptions<'a> {
-    pub languages: Option<Vec<&'a str>>,
-    pub address_components: AddressComponents,
-    pub string_options: StringOptions,
+    languages: Option<Vec<&'a str>>,
+    address_components: AddressComponents,
+    string_options: StringOptions,
     libpostal_options: LibpostalNormalizeOptions,
 }
 
@@ -269,6 +269,53 @@ impl<'a> NormalizeOptions<'a> {
             options.update_languages(languages.as_slice());
         }
         options
+    }
+
+    /// Return current languages.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rustpostal::expand::NormalizeOptions;
+    ///
+    /// let options = NormalizeOptions::default();
+    /// assert_eq!(options.languages(), None);
+    ///
+    /// let languages = ["en", "gb"];
+    /// let options = NormalizeOptions::new(Some(languages.iter().map(|s| *s)));
+    /// assert_eq!(options.languages(), Some(&languages[..]));
+    /// ```
+    pub fn languages(&self) -> Option<&[&str]> {
+        if let Some(languages) = &self.languages {
+            return Some(languages.as_slice());
+        }
+        None
+    }
+
+    /// Return current address components.
+    ///
+    /// ```
+    /// use rustpostal::expand::{NormalizeOptions, AddressComponents};
+    ///
+    /// let mut options = NormalizeOptions::default();
+    /// options.add_address_component(AddressComponents::NAME);
+    /// assert_eq!(options.address_components(), AddressComponents::NAME);
+    /// ```
+    pub fn address_components(&self) -> AddressComponents {
+        self.address_components
+    }
+
+    /// Return current string options.
+    ///
+    /// ```
+    /// use rustpostal::expand::{NormalizeOptions, StringOptions};
+    ///
+    /// let mut options = NormalizeOptions::default();
+    /// options.add_string_option(StringOptions::TRANSLITERATE);
+    /// assert_eq!(options.string_options(), StringOptions::TRANSLITERATE);
+    /// ```
+    pub fn string_options(&self) -> StringOptions {
+        self.string_options
     }
 
     /// Expand address.
