@@ -83,8 +83,32 @@ struct LibpostalNormalizeOptions {
 }
 
 /// Normalization options.
-pub struct NormalizeOptions<'a, T: Iterator<Item = &'a str>> {
-    pub languages: Option<T>,
+///
+/// Options are required to expand a postal address to its normalized variations. They are created
+/// by defining optionally language-codes for normalization (e.g. 'en'), and then gradually
+/// adding more options.
+///
+/// A `expand` method is implemented to use the options for normalizing an address.
+///
+/// # Examples
+///
+/// ```
+/// use rustpostal::expand::{AddressComponents, StringOptions, NormalizeOptions};
+///
+/// let languages = ["en", "gb"];
+/// let mut options = NormalizeOptions::new(Some(languages.iter().map(|&s| s)));
+/// assert_eq!(options.languages, Some(languages.to_vec()));
+///
+/// let s_options = StringOptions::TRANSLITERATE | StringOptions::LOWERCASE;
+/// let components = AddressComponents::NAME | AddressComponents::LEVEL;
+///
+/// options.add_string_option(s_options);
+/// assert!(options.string_options.contains(s_options));
+///
+/// options.add_address_component(components);
+/// assert!(options.address_components.contains(components));
+pub struct NormalizeOptions<'a> {
+    pub languages: Option<Vec<&'a str>>,
     pub address_components: AddressComponents,
     pub string_options: StringOptions,
     libpostal_options: LibpostalNormalizeOptions,
@@ -148,14 +172,14 @@ impl LibpostalNormalizeOptions {
     }
 
     /// Update languages in ffi.
-    fn update_languages<'a, T: Iterator<Item = &'a str>>(&mut self, languages: &mut T) {
+    fn update_languages<'a>(&mut self, languages: &[&'a str]) {
         if self.lang_buffer.is_some() {
             return;
         }
         self.free_lang_ptrs();
         let mut lang_buffer: Vec<*const c_char> = languages
-            .by_ref()
-            .map(|s| CString::new(s).unwrap().into_raw() as *const c_char)
+            .iter()
+            .map(|&s| CString::new(s).unwrap().into_raw() as *const c_char)
             .collect();
         let ffi = self.inner_mut();
         ffi.languages = lang_buffer.as_mut_ptr();
@@ -200,10 +224,7 @@ impl Drop for LibpostalNormalizeOptions {
     }
 }
 
-impl<'a, T> Default for NormalizeOptions<'a, T>
-where
-    T: Iterator<Item = &'a str>,
-{
+impl<'a> Default for NormalizeOptions<'a> {
     fn default() -> Self {
         NormalizeOptions {
             languages: Default::default(),
@@ -214,14 +235,17 @@ where
     }
 }
 
-impl<'a, T: Iterator<Item = &'a str>> NormalizeOptions<'a, T> {
+impl<'a> NormalizeOptions<'a> {
     /// Create new instance with default options.
     ///
     /// `languages` override the respective option field, if given.
-    pub fn new(languages: Option<T>) -> NormalizeOptions<'a, T> {
+    pub fn new<T>(languages: Option<T>) -> NormalizeOptions<'a>
+    where
+        T: Iterator<Item = &'a str>,
+    {
         let mut options = NormalizeOptions::default();
-        if languages.is_some() {
-            options.languages = languages;
+        if let Some(languages) = languages {
+            options.languages = Some(languages.collect());
         }
         options
     }
@@ -237,12 +261,12 @@ impl<'a, T: Iterator<Item = &'a str>> NormalizeOptions<'a, T> {
     }
 
     /// Create libpostal options.
-    fn libpostal_options(&mut self) -> LibpostalNormalizeOptions {
+    fn libpostal_options(&self) -> LibpostalNormalizeOptions {
         let mut options: LibpostalNormalizeOptions = Default::default();
         options.update_string_options(&self.string_options);
         options.update_address_components(&self.address_components);
-        if let Some(languages) = &mut self.languages {
-            options.update_languages(languages);
+        if let Some(languages) = &self.languages {
+            options.update_languages(languages.as_slice());
         }
         options
     }
@@ -344,7 +368,7 @@ mod test {
     fn libpostal_normalize_options_update_languages() {
         let mut languages = ["en", "gr"];
         let mut options: LibpostalNormalizeOptions = Default::default();
-        options.update_languages(&mut languages.iter().by_ref().map(|l| *l));
+        options.update_languages(&languages);
         let ffi = &options.ffi.as_ref().unwrap();
         for i in 0..ffi.num_languages {
             unsafe {
