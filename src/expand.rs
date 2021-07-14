@@ -23,7 +23,7 @@
 #![allow(unused)]
 
 use bitflags::bitflags;
-use std::ffi::{CStr, CString};
+use std::ffi::{CStr, CString, NulError};
 use std::iter::Iterator;
 
 use libc::{c_char, size_t};
@@ -319,10 +319,10 @@ impl<'a> NormalizeOptions<'a> {
     }
 
     /// Expand address.
-    pub fn expand(&mut self, address: &str) -> NormalizedAddress {
+    pub fn expand(&mut self, address: &str) -> Result<NormalizedAddress, NulError> {
         let mut options = self.libpostal_options();
-        let c_address = CString::new(address).unwrap();
-        options.expand(&c_address)
+        let c_address = CString::new(address)?;
+        Ok(options.expand(&c_address))
     }
 }
 
