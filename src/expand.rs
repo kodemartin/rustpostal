@@ -318,7 +318,32 @@ impl<'a> NormalizeOptions<'a> {
         self.string_options
     }
 
-    /// Expand address.
+    /// Expand address into normalized variations using libpostal.
+    ///
+    /// ## Examples
+    ///
+    /// ```
+    /// use rustpostal::{LibModules, setup, teardown};
+    /// use rustpostal::expand::NormalizeOptions;
+    ///
+    /// unsafe { setup(LibModules::Expand) };
+    ///
+    /// let mut options = NormalizeOptions::default();
+    /// let address = "St Johns Centre, Rope Walk, Bedford, Bedfordshire, MK42 0XE, United Kingdom";
+    ///
+    /// let expanded = options.expand(address).unwrap();
+    /// for variation in &expanded {
+    ///     assert!(variation.ends_with("kingdom"))
+    /// }
+    ///
+    /// unsafe { teardown(LibModules::Expand) };
+    /// ```
+    ///
+    /// ## Errors
+    ///
+    /// The method will return an error if the supplied address
+    /// contains an internal null byte. The error is represented by
+    /// [`NulError`](https://doc.rust-lang.org/nightly/std/ffi/c_str/struct.NulError.html)
     pub fn expand(&mut self, address: &str) -> Result<NormalizedAddress, NulError> {
         let mut options = self.libpostal_options();
         let c_address = CString::new(address)?;
