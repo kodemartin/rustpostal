@@ -77,6 +77,7 @@ bitflags! {
 }
 
 /// Wrap the options to pass to the C library.
+#[derive(Clone, Hash, Debug)]
 struct LibpostalNormalizeOptions {
     ffi: Option<ffi::libpostal_normalize_options>,
     lang_buffer: Option<Vec<*const c_char>>,
@@ -107,6 +108,7 @@ struct LibpostalNormalizeOptions {
 ///
 /// options.add_address_component(components);
 /// assert!(options.address_components().as_ref().unwrap().contains(components));
+#[derive(Clone, Hash, Debug)]
 pub struct NormalizeOptions<'a> {
     languages: Option<Vec<&'a str>>,
     address_components: Option<AddressComponents>,

@@ -47,6 +47,7 @@ pub struct libpostal_address_parser_response {
 }
 
 #[repr(C)]
+#[derive(Clone, Hash, Debug)]
 pub struct libpostal_normalize_options {
     pub languages: *mut *const libc::c_char,
     pub num_languages: libc::size_t,
