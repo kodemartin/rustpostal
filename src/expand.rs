@@ -3,21 +3,23 @@
 //! # Examples
 //!
 //! ```
-//! use rustpostal::LibModules;
-//! use rustpostal::expand;
+//! use std::ffi::NulError;
+//! use rustpostal::{expand, LibModules};
 //!
-//! fn main() {
+//! fn main() -> Result<(), NulError> {
 //!     unsafe { rustpostal::setup(LibModules::Expand) }
 //!
 //!     let address = "St Johns Centre, Rope Walk, Bedford, Bedfordshire, MK42 0XE, United Kingdom";
 //!
-//!     let expanded = expand::expand_address_with_options(address, Some(vec!["en"]));
+//!     let languages = ["en", "gb"].iter().map(|&s| s);
+//!     let expanded = expand::expand_address_with_options(address, Some(languages))?;
 //!
-//!     for expansion in expanded {
-//!         println!("{}", expansion);
+//!     for variation in &expanded {
+//!         println!("{}", variation);
 //!     }
 //!
 //!     unsafe { rustpostal::teardown(LibModules::Expand) }
+//!     Ok(())
 //! }
 //! ```
 #![allow(unused)]
@@ -340,20 +342,25 @@ impl<'a> NormalizeOptions<'a> {
     /// ## Examples
     ///
     /// ```
+    /// use std::ffi::NulError;
+    ///
     /// use rustpostal::{LibModules, setup, teardown};
     /// use rustpostal::expand::NormalizeOptions;
     ///
-    /// unsafe { setup(LibModules::Expand) };
+    /// fn main() -> Result<(), NulError> {
+    ///     unsafe { setup(LibModules::Expand) };
     ///
-    /// let mut options = NormalizeOptions::default();
-    /// let address = "St Johns Centre, Rope Walk, Bedford, Bedfordshire, MK42 0XE, United Kingdom";
+    ///     let mut options = NormalizeOptions::default();
+    ///     let address = "St Johns Centre, Rope Walk, Bedford, Bedfordshire, MK42 0XE, United Kingdom";
     ///
-    /// let expanded = options.expand(address).unwrap();
-    /// for variation in &expanded {
-    ///     assert!(variation.ends_with("kingdom"))
+    ///     let expanded = options.expand(address).unwrap();
+    ///     for variation in &expanded {
+    ///         assert!(variation.ends_with("kingdom"))
+    ///     }
+    ///
+    ///     unsafe { teardown(LibModules::Expand) };
+    ///     Ok(())
     /// }
-    ///
-    /// unsafe { teardown(LibModules::Expand) };
     /// ```
     ///
     /// ## Errors
@@ -410,35 +417,22 @@ impl<'a> IntoIterator for &'a mut NormalizedAddress {
 }
 
 /// Normalize address with default options.
-/// pub fn expand_address<'a, T>(address: &'a str) -> T
-///     where T: Iterator<Item = &'a str>
-/// {
-///     expand_address_with_options(address, None)
-/// }
+pub fn expand_address<'a>(address: &'a str) -> Result<NormalizedAddress, NulError> {
+    let mut options = NormalizeOptions::default();
+    options.expand(address)
+}
 
 /// Normalize address with optional user-defined languages.
-/// pub fn expand_address_with_options<'a, T>(address: &'a str, languages: Option<T>) -> T
-///     where T: Iterator<Item=&'a str>
-/// {
-///     let address = CString::new(address).unwrap();
-///     let mut rust_options = NormalizeOptions::new(languages);
-///     let mut n: libc::size_t = 0;
-///
-///     unsafe {
-///         let options = rust_options.as_libpostal_options();
-///         let raw =
-///             ffi::libpostal_expand_address(address.as_ptr() as *const libc::c_char, options, &mut n);
-///         let mut expanded = Vec::with_capacity(n);
-///         for i in 0..n {
-///             if let Some(phrase) = raw.add(i).as_ref() {
-///                 let normalized = CStr::from_ptr(*phrase);
-///                 expanded.push(String::from(normalized.to_str().unwrap()));
-///             };
-///         }
-///         ffi::libpostal_expansion_array_destroy(raw, n);
-///         expanded
-///     }
-/// }
+pub fn expand_address_with_options<'a, T>(
+    address: &'a str,
+    languages: Option<T>,
+) -> Result<NormalizedAddress, NulError>
+where
+    T: Iterator<Item = &'a str>,
+{
+    let mut options = NormalizeOptions::new(languages);
+    options.expand(address)
+}
 
 #[cfg(test)]
 mod test {
