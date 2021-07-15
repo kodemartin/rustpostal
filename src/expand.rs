@@ -117,6 +117,7 @@ pub struct NormalizeOptions<'a> {
 }
 
 /// Collections of normalized variations of postal address.
+#[derive(Clone, Hash, Debug)]
 pub struct NormalizedAddress {
     variations: Vec<String>,
     n: size_t,
