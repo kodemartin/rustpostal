@@ -103,14 +103,14 @@ struct LibpostalNormalizeOptions {
 /// let components = AddressComponents::NAME | AddressComponents::LEVEL;
 ///
 /// options.add_string_option(s_options);
-/// assert!(options.string_options().contains(s_options));
+/// assert!(options.string_options().as_ref().unwrap().contains(s_options));
 ///
 /// options.add_address_component(components);
-/// assert!(options.address_components().contains(components));
+/// assert!(options.address_components().as_ref().unwrap().contains(components));
 pub struct NormalizeOptions<'a> {
     languages: Option<Vec<&'a str>>,
-    address_components: AddressComponents,
-    string_options: StringOptions,
+    address_components: Option<AddressComponents>,
+    string_options: Option<StringOptions>,
     libpostal_options: LibpostalNormalizeOptions,
 }
 
@@ -252,19 +252,31 @@ impl<'a> NormalizeOptions<'a> {
 
     /// Add string option.
     pub fn add_string_option(&mut self, option: StringOptions) {
-        self.string_options.insert(option);
+        if let Some(options) = &mut self.string_options {
+            options.insert(option);
+        } else {
+            self.string_options = Some(option);
+        }
     }
 
     /// Add address component option.
     pub fn add_address_component(&mut self, component: AddressComponents) {
-        self.address_components.insert(component);
+        if let Some(components) = &mut self.address_components {
+            components.insert(component);
+        } else {
+            self.address_components = Some(component);
+        }
     }
 
     /// Create libpostal options.
     fn libpostal_options(&self) -> LibpostalNormalizeOptions {
         let mut options: LibpostalNormalizeOptions = Default::default();
-        options.update_string_options(&self.string_options);
-        options.update_address_components(&self.address_components);
+        if let Some(string_options) = &self.string_options {
+            options.update_string_options(string_options);
+        }
+        if let Some(address_components) = &self.address_components {
+            options.update_address_components(address_components);
+        }
         if let Some(languages) = &self.languages {
             options.update_languages(languages.as_slice());
         }
@@ -298,11 +310,12 @@ impl<'a> NormalizeOptions<'a> {
     /// use rustpostal::expand::{NormalizeOptions, AddressComponents};
     ///
     /// let mut options = NormalizeOptions::default();
+    /// assert_eq!(options.address_components(), None);
     /// options.add_address_component(AddressComponents::NAME);
-    /// assert_eq!(options.address_components(), AddressComponents::NAME);
+    /// assert_eq!(options.address_components(), Some(&AddressComponents::NAME));
     /// ```
-    pub fn address_components(&self) -> AddressComponents {
-        self.address_components
+    pub fn address_components(&self) -> Option<&AddressComponents> {
+        self.address_components.as_ref()
     }
 
     /// Return current string options.
@@ -311,11 +324,12 @@ impl<'a> NormalizeOptions<'a> {
     /// use rustpostal::expand::{NormalizeOptions, StringOptions};
     ///
     /// let mut options = NormalizeOptions::default();
+    /// assert_eq!(options.string_options(), None);
     /// options.add_string_option(StringOptions::TRANSLITERATE);
-    /// assert_eq!(options.string_options(), StringOptions::TRANSLITERATE);
+    /// assert_eq!(options.string_options(), Some(&StringOptions::TRANSLITERATE));
     /// ```
-    pub fn string_options(&self) -> StringOptions {
-        self.string_options
+    pub fn string_options(&self) -> Option<&StringOptions> {
+        self.string_options.as_ref()
     }
 
     /// Expand address into normalized variations using libpostal.
