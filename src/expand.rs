@@ -99,7 +99,7 @@ struct LibpostalNormalizeOptions {
 /// use rustpostal::expand::{AddressComponents, StringOptions, NormalizeOptions};
 ///
 /// let languages = ["en", "gb"];
-/// let mut options = NormalizeOptions::new(Some(languages.iter().map(|&s| s)));
+/// let mut options = NormalizeOptions::new(Some(languages.iter()));
 /// assert_eq!(options.languages(), Some(&languages[..]));
 ///
 /// let s_options = StringOptions::TRANSLITERATE | StringOptions::LOWERCASE;
@@ -244,13 +244,14 @@ impl<'a> NormalizeOptions<'a> {
     /// Create new instance with default options.
     ///
     /// `languages` override the respective option field, if given.
-    pub fn new<T>(languages: Option<T>) -> NormalizeOptions<'a>
+    pub fn new<'b, T>(languages: Option<T>) -> NormalizeOptions<'a>
     where
-        T: Iterator<Item = &'a str>,
+        'a: 'b,
+        T: Iterator<Item = &'b&'a str>,
     {
         let mut options = NormalizeOptions::default();
         if let Some(languages) = languages {
-            options.languages = Some(languages.collect());
+            options.languages = Some(languages.map(|&s| s).collect());
         }
         options
     }
@@ -299,7 +300,7 @@ impl<'a> NormalizeOptions<'a> {
     /// assert_eq!(options.languages(), None);
     ///
     /// let languages = ["en", "gb"];
-    /// let options = NormalizeOptions::new(Some(languages.iter().map(|s| *s)));
+    /// let options = NormalizeOptions::new(Some(languages.iter()));
     /// assert_eq!(options.languages(), Some(&languages[..]));
     /// ```
     pub fn languages(&self) -> Option<&[&str]> {
@@ -435,12 +436,13 @@ pub fn expand_address<'a>(address: &'a str) -> Result<NormalizedAddress, NulErro
 /// The method will return an error if the supplied address
 /// contains an internal null byte. The error is represented by
 /// [`NulError`](https://doc.rust-lang.org/nightly/std/ffi/c_str/struct.NulError.html).
-pub fn expand_address_with_options<'a, T>(
+pub fn expand_address_with_options<'a, 'b, T>(
     address: &'a str,
     languages: Option<T>,
 ) -> Result<NormalizedAddress, NulError>
 where
-    T: Iterator<Item = &'a str>,
+    'a: 'b,
+    T: Iterator<Item = &'b&'a str>,
 {
     let mut options = NormalizeOptions::new(languages);
     options.expand(address)
