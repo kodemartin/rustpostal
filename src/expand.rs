@@ -4,21 +4,23 @@
 //!
 //! ```
 //! use std::ffi::NulError;
-//! use rustpostal::{expand, LibModules};
 //!
-//! fn main() -> Result<(), NulError> {
-//!     unsafe { rustpostal::setup(LibModules::Expand) }
+//! use rustpostal::{expand, LibModules};
+//! use rustpostal::error::RuntimeError;
+//!
+//! fn main() -> Result<(), RuntimeError> {
+//!     let postal_module = LibModules::Expand;
+//!     postal_module.setup()?;
 //!
 //!     let address = "St Johns Centre, Rope Walk, Bedford, Bedfordshire, MK42 0XE, United Kingdom";
 //!
-//!     let languages = ["en", "gb"].iter().map(|&s| s);
-//!     let expanded = expand::expand_address_with_options(address, Some(languages))?;
+//!     let languages = ["en", "gb"];
+//!     let expanded = expand::expand_address_with_options(address, Some(languages.iter()))?;
 //!
 //!     for variation in &expanded {
 //!         println!("{}", variation);
 //!     }
 //!
-//!     unsafe { rustpostal::teardown(LibModules::Expand) }
 //!     Ok(())
 //! }
 //! ```
@@ -247,7 +249,7 @@ impl<'a> NormalizeOptions<'a> {
     pub fn new<'b, T>(languages: Option<T>) -> NormalizeOptions<'a>
     where
         'a: 'b,
-        T: Iterator<Item = &'b&'a str>,
+        T: Iterator<Item = &'b &'a str>,
     {
         let mut options = NormalizeOptions::default();
         if let Some(languages) = languages {
@@ -345,11 +347,13 @@ impl<'a> NormalizeOptions<'a> {
     /// ```
     /// use std::ffi::NulError;
     ///
-    /// use rustpostal::{LibModules, setup, teardown};
+    /// use rustpostal::LibModules;
     /// use rustpostal::expand::NormalizeOptions;
+    /// use rustpostal::error::RuntimeError;
     ///
-    /// fn main() -> Result<(), NulError> {
-    ///     unsafe { setup(LibModules::Expand) };
+    /// fn main() -> Result<(), RuntimeError> {
+    ///     let postal_module = LibModules::Expand;
+    ///     postal_module.setup()?;
     ///
     ///     let mut options = NormalizeOptions::default();
     ///     let address = "St Johns Centre, Rope Walk, Bedford, Bedfordshire, MK42 0XE, United Kingdom";
@@ -359,7 +363,6 @@ impl<'a> NormalizeOptions<'a> {
     ///         assert!(variation.ends_with("kingdom"))
     ///     }
     ///
-    ///     unsafe { teardown(LibModules::Expand) };
     ///     Ok(())
     /// }
     /// ```
@@ -442,7 +445,7 @@ pub fn expand_address_with_options<'a, 'b, T>(
 ) -> Result<NormalizedAddress, NulError>
 where
     'a: 'b,
-    T: Iterator<Item = &'b&'a str>,
+    T: Iterator<Item = &'b &'a str>,
 {
     let mut options = NormalizeOptions::new(languages);
     options.expand(address)
@@ -451,7 +454,8 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{setup, teardown, LibModules};
+    use crate::error::RuntimeError;
+    use crate::LibModules;
 
     #[test]
     fn default_libpostal_normalize_options() {
@@ -497,11 +501,12 @@ mod test {
     }
 
     #[test]
-    fn libpostal_normalize_options_expand() {
-        unsafe { setup(LibModules::Expand) }
+    fn libpostal_normalize_options_expand() -> Result<(), RuntimeError> {
+        let postal_module = LibModules::Expand;
+        postal_module.setup()?;
 
         let address = "St Johns Centre, Rope Walk, Bedford, Bedfordshire, MK42 0XE, United Kingdom";
-        let c_address = CString::new(address).unwrap();
+        let c_address = CString::new(address)?;
 
         let mut libpostal_options: LibpostalNormalizeOptions = Default::default();
 
@@ -515,8 +520,7 @@ mod test {
         for variation in &expanded {
             assert!(variation.ends_with("kingdom"));
         }
-
-        unsafe { teardown(LibModules::Expand) }
+        Ok(())
     }
 
     #[test]
