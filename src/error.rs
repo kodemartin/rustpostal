@@ -1,11 +1,11 @@
-//! Runtime errors for the [`rustpostal`] crate.
+//! Runtime errors for the [`rustpostal`](`crate`) crate.
 
 use std::error;
 use std::ffi::NulError;
 use std::fmt;
 
 /// An error indicating failure in setting up required `libpostal` resources.
-/// Returned by [`setup`](`LibModules.setup`) method on [`LibModules`].
+/// Returned by [`setup`](`crate::LibModules::setup`) method on [`LibModules`](`crate::LibModules`).
 #[derive(Debug, Clone)]
 pub struct SetupError;
 
