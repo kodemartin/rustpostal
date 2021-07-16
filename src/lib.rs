@@ -9,8 +9,11 @@ use std::process;
 use self::LibModules::*;
 
 pub mod address;
+pub mod error;
 pub mod expand;
 mod ffi;
+
+use error::SetupError;
 
 /// Library modules to setup and teardown, at the start
 /// and at the end of our program.
