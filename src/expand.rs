@@ -353,7 +353,7 @@ impl<'a> NormalizeOptions<'a> {
     ///     let mut options = NormalizeOptions::default();
     ///     let address = "St Johns Centre, Rope Walk, Bedford, Bedfordshire, MK42 0XE, United Kingdom";
     ///
-    ///     let expanded = options.expand(address).unwrap();
+    ///     let expanded = options.expand(address)?;
     ///     for variation in &expanded {
     ///         assert!(variation.ends_with("kingdom"))
     ///     }
@@ -367,7 +367,7 @@ impl<'a> NormalizeOptions<'a> {
     ///
     /// The method will return an error if the supplied address
     /// contains an internal null byte. The error is represented by
-    /// [`NulError`](https://doc.rust-lang.org/nightly/std/ffi/c_str/struct.NulError.html)
+    /// [`NulError`](https://doc.rust-lang.org/nightly/std/ffi/c_str/struct.NulError.html).
     pub fn expand(&mut self, address: &str) -> Result<NormalizedAddress, NulError> {
         let mut options = self.libpostal_options();
         let c_address = CString::new(address)?;
@@ -417,12 +417,24 @@ impl<'a> IntoIterator for &'a mut NormalizedAddress {
 }
 
 /// Normalize address with default options.
+///
+/// ## Errors
+///
+/// The method will return an error if the supplied address
+/// contains an internal null byte. The error is represented by
+/// [`NulError`](https://doc.rust-lang.org/nightly/std/ffi/c_str/struct.NulError.html).
 pub fn expand_address<'a>(address: &'a str) -> Result<NormalizedAddress, NulError> {
     let mut options = NormalizeOptions::default();
     options.expand(address)
 }
 
 /// Normalize address with optional user-defined languages.
+///
+/// ## Errors
+///
+/// The method will return an error if the supplied address
+/// contains an internal null byte. The error is represented by
+/// [`NulError`](https://doc.rust-lang.org/nightly/std/ffi/c_str/struct.NulError.html).
 pub fn expand_address_with_options<'a, T>(
     address: &'a str,
     languages: Option<T>,
