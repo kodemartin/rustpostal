@@ -3,8 +3,6 @@
 //! # Examples
 //!
 //! ```
-//! use std::ffi::NulError;
-//!
 //! use rustpostal::{expand, LibModules};
 //! use rustpostal::error::RuntimeError;
 //!
