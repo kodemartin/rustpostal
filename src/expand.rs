@@ -98,26 +98,30 @@ struct LibpostalNormalizeOptions {
 /// # Examples
 ///
 /// ```
+/// use std::ffi::NulError;
 /// use rustpostal::expand::{AddressComponents, StringOptions, NormalizeOptions};
 ///
-/// let languages = ["en", "gb"];
-/// let mut options = NormalizeOptions::new(Some(languages.iter()));
-/// assert_eq!(options.languages(), Some(&languages[..]));
+/// fn main() -> Result<(), NulError> {
+///     let languages = ["en", "gb"];
+///     let mut options = NormalizeOptions::new(Some(languages.iter()))?;
+///     assert_eq!(options.languages().unwrap().collect::<Vec<&str>>(), Vec::from(languages));
 ///
-/// let s_options = StringOptions::TRANSLITERATE | StringOptions::LOWERCASE;
-/// let components = AddressComponents::NAME | AddressComponents::LEVEL;
+///     let s_options = StringOptions::TRANSLITERATE | StringOptions::LOWERCASE;
+///     let components = AddressComponents::NAME | AddressComponents::LEVEL;
 ///
-/// options.add_string_option(s_options);
-/// assert!(options.string_options().as_ref().unwrap().contains(s_options));
+///     options.add_string_option(s_options);
+///     assert!(options.string_options().as_ref().unwrap().contains(s_options));
 ///
-/// options.add_address_component(components);
-/// assert!(options.address_components().as_ref().unwrap().contains(components));
-#[derive(Clone, Hash, Debug)]
-pub struct NormalizeOptions<'a> {
-    languages: Option<Vec<&'a str>>,
+///     options.add_address_component(components);
+///     assert!(options.address_components().as_ref().unwrap().contains(components));
+///     Ok(())
+/// }
+/// ```
+#[derive(Clone, Default, Hash, Debug)]
+pub struct NormalizeOptions {
+    languages: Option<Vec<CString>>,
     address_components: Option<AddressComponents>,
     string_options: Option<StringOptions>,
-    libpostal_options: LibpostalNormalizeOptions,
 }
 
 /// Collections of normalized variations of postal address.
@@ -179,15 +183,12 @@ impl LibpostalNormalizeOptions {
     }
 
     /// Update languages in ffi.
-    fn update_languages<'a>(&mut self, languages: &[&'a str]) {
+    fn update_languages<'a, T: Iterator<Item = &'a CString>>(&mut self, languages: T) {
         if self.lang_buffer.is_some() {
             return;
         }
         self.free_lang_ptrs();
-        let mut lang_buffer: Vec<*const c_char> = languages
-            .iter()
-            .map(|&s| CString::new(s).unwrap().into_raw() as *const c_char)
-            .collect();
+        let mut lang_buffer: Vec<*const c_char> = languages.map(|s| s.as_ptr()).collect();
         let ffi = self.inner_mut();
         ffi.languages = lang_buffer.as_mut_ptr();
         ffi.num_languages = lang_buffer.len();
@@ -225,37 +226,25 @@ impl Default for LibpostalNormalizeOptions {
     }
 }
 
-impl Drop for LibpostalNormalizeOptions {
-    fn drop(&mut self) {
-        self.free_lang_ptrs();
-    }
-}
-
-impl<'a> Default for NormalizeOptions<'a> {
-    fn default() -> Self {
-        NormalizeOptions {
-            languages: Default::default(),
-            address_components: Default::default(),
-            string_options: Default::default(),
-            libpostal_options: Default::default(),
-        }
-    }
-}
-
-impl<'a> NormalizeOptions<'a> {
+impl NormalizeOptions {
     /// Create new instance with default options.
     ///
     /// `languages` override the respective option field, if given.
-    pub fn new<'b, T>(languages: Option<T>) -> NormalizeOptions<'a>
+    pub fn new<'a, 'b, T>(languages: Option<T>) -> Result<NormalizeOptions, NulError>
     where
         'a: 'b,
         T: Iterator<Item = &'b &'a str>,
     {
         let mut options = NormalizeOptions::default();
         if let Some(languages) = languages {
-            options.languages = Some(languages.map(|&s| s).collect());
+            let mut new_langs = Vec::new();
+            for lang in languages {
+                let c_lang = CString::new(*lang)?;
+                new_langs.push(c_lang);
+            }
+            options.languages = Some(new_langs);
         }
-        options
+        Ok(options)
     }
 
     /// Add string option.
@@ -286,7 +275,7 @@ impl<'a> NormalizeOptions<'a> {
             options.update_address_components(address_components);
         }
         if let Some(languages) = &self.languages {
-            options.update_languages(languages.as_slice());
+            options.update_languages(languages.as_slice().iter());
         }
         options
     }
@@ -296,18 +285,23 @@ impl<'a> NormalizeOptions<'a> {
     /// # Examples
     ///
     /// ```
+    /// use std::ffi::NulError;
     /// use rustpostal::expand::NormalizeOptions;
     ///
-    /// let options = NormalizeOptions::default();
-    /// assert_eq!(options.languages(), None);
+    /// fn main() -> Result<(), NulError> {
+    ///     let options = NormalizeOptions::default();
+    ///     assert!(options.languages().is_none());
     ///
-    /// let languages = ["en", "gb"];
-    /// let options = NormalizeOptions::new(Some(languages.iter()));
-    /// assert_eq!(options.languages(), Some(&languages[..]));
+    ///     let languages = ["en", "gb"];
+    ///     let options = NormalizeOptions::new(Some(languages.iter()))?;
+    ///
+    ///     assert_eq!(options.languages().unwrap().collect::<Vec<&str>>(), Vec::from(languages));
+    ///     Ok(())
+    /// }
     /// ```
-    pub fn languages(&self) -> Option<&[&str]> {
+    pub fn languages(&self) -> Option<impl Iterator<Item = &str>> {
         if let Some(languages) = &self.languages {
-            return Some(languages.as_slice());
+            return Some(languages.as_slice().iter().map(|c| c.to_str().unwrap()));
         }
         None
     }
@@ -447,7 +441,7 @@ where
     'a: 'b,
     T: Iterator<Item = &'b &'a str>,
 {
-    let mut options = NormalizeOptions::new(languages);
+    let mut options = NormalizeOptions::new(languages)?;
     options.expand(address)
 }
 
@@ -468,8 +462,12 @@ mod test {
     #[test]
     fn libpostal_normalize_options_update_languages() {
         let mut languages = ["en", "gr"];
+        let c_languages: Vec<CString> = languages
+            .iter()
+            .map(|s| CString::new(*s).unwrap())
+            .collect();
         let mut options: LibpostalNormalizeOptions = Default::default();
-        options.update_languages(&languages);
+        options.update_languages(c_languages.as_slice().iter());
         let ffi = &options.ffi.as_ref().unwrap();
         for i in 0..ffi.num_languages {
             unsafe {
