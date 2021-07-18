@@ -1,6 +1,32 @@
-//! # `rustpostal`
-//!
 //! [`libpostal`][libpostal] bindings for the Rust programming language.
+//!
+//! # Examples
+//!
+//! ```
+//! use rustpostal::address;
+//! use rustpostal::expand;
+//! use rustpostal::LibModules;
+//!
+//! fn main() -> Result<(), rustpostal::error::RuntimeError> {
+//!     let postal_module = LibModules::All;
+//!     postal_module.setup()?;
+//!
+//!     let address = "St Johns Centre, Rope Walk, Bedford, Bedfordshire, MK42 0XE, United Kingdom";
+//!
+//!     let labeled_tokens = address::parse_address(address, None, None)?;
+//!
+//!     for (token, label) in &labeled_tokens {
+//!         println!("{}: {}", token, label);
+//!     }
+//!
+//!     let expanded = expand::expand_address_with_options(address, Some(["en"].iter()))?;
+//!
+//!     for expansion in &expanded {
+//!         println!("{}", expansion);
+//!     }
+//!     Ok(())
+//! }
+//! ```
 //!
 //! [libpostal]: https://github.com/openvenues/libpostal
 
