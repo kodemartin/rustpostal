@@ -155,7 +155,7 @@ pub unsafe fn setup(component: LibModules) {
 /// program safe.
 #[deprecated(
     since = "0.2.0",
-    note = "This can be handled by the `Drop` traint when `LibModules` values go out of scope"
+    note = "This can be handled by the `Drop` trait when `LibModules` values go out of scope"
 )]
 pub unsafe fn teardown(component: LibModules) {
     ffi::libpostal_teardown();
