@@ -1,5 +1,6 @@
 extern crate rustpostal;
 
+use rustpostal::error::RuntimeError;
 use rustpostal::expand;
 use rustpostal::LibModules;
 
@@ -39,8 +40,8 @@ const TEST_CASES: &[(&str, &str, &str)] = &[
 ];
 
 fn expansion_contains_phrase(address: &str, phrase: &str) -> bool {
-    let expansion = expand::expand_address(address);
-    for expanded in expansion {
+    let expansion = expand::expand_address(address).unwrap();
+    for expanded in &expansion {
         if expanded == phrase {
             return true;
         }
@@ -49,8 +50,8 @@ fn expansion_contains_phrase(address: &str, phrase: &str) -> bool {
 }
 
 fn expansion_contains_phrase_with_options(address: &str, phrase: &str, lang: &str) -> bool {
-    let expansion = expand::expand_address_with_options(address, Some(vec![lang]));
-    for expanded in expansion {
+    let expansion = expand::expand_address_with_options(address, Some(vec![lang].iter())).unwrap();
+    for expanded in &expansion {
         if expanded == phrase {
             return true;
         }
@@ -59,21 +60,23 @@ fn expansion_contains_phrase_with_options(address: &str, phrase: &str, lang: &st
 }
 
 #[test]
-fn expand() {
-    unsafe { rustpostal::setup(LibModules::Expand) };
+fn expand() -> Result<(), RuntimeError> {
+    let postal_module = LibModules::Expand;
+    postal_module.setup()?;
     for (address, phrase, _) in TEST_CASES {
         assert!(expansion_contains_phrase(address, phrase));
     }
-    unsafe { rustpostal::teardown(LibModules::Expand) };
+    Ok(())
 }
 
 #[test]
-fn expand_with_options() {
-    unsafe { rustpostal::setup(LibModules::Expand) };
+fn expand_with_options() -> Result<(), RuntimeError> {
+    let postal_module = LibModules::Expand;
+    postal_module.setup()?;
     for (address, phrase, lang) in TEST_CASES {
         assert!(expansion_contains_phrase_with_options(
             address, phrase, lang
         ));
     }
-    unsafe { rustpostal::teardown(LibModules::Expand) };
+    Ok(())
 }

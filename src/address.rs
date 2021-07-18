@@ -12,7 +12,7 @@
 //!
 //!     let address = "St Johns Centre, Rope Walk, Bedford, Bedfordshire, MK42 0XE, United Kingdom";
 //!
-//!     let labeled_tokens = address::parse_address(address, None, None);
+//!     let labeled_tokens = address::parse_address(address, None, None)?;
 //!
 //!     for (label, token) in &labeled_tokens {
 //!         println!("{}: {}", label, token);
@@ -65,7 +65,7 @@ impl AddressParserOptions {
     /// use rustpostal::address;
     ///
     /// fn main() -> Result<(), std::ffi::NulError> {
-    ///     let options = AddressParserOptions("en", "en")?;
+    ///     let options = address::AddressParserOptions::new(Some("en"), Some("en"))?;
     ///     Ok(())
     /// }
     /// ```
@@ -125,7 +125,7 @@ impl AddressParserOptions {
     ///     let postal_module = LibModules::Address;
     ///     postal_module.setup()?;
     ///     
-    ///     let options = AddressParserOptions::new();
+    ///     let options = address::AddressParserOptions::new(None, None)?;
     ///     let address = "St Johns Centre, Rope Walk, Bedford, Bedfordshire, MK42 0XE, United Kingdom";
     ///     let labels_tokens = options.parse(address)?;
     ///
