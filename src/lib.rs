@@ -46,7 +46,7 @@ unsafe fn teardown_classifier() {
 impl LibModules {
     /// Setup the necessary `libpostal` resources.
     ///
-    /// ## Examples
+    /// # Examples
     /// ```
     /// use rustpostal::error::SetupError;
     /// use rustpostal::LibModules;

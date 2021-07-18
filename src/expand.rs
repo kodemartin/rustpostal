@@ -335,7 +335,7 @@ impl NormalizeOptions {
 
     /// Expand address into normalized variations using libpostal.
     ///
-    /// ## Examples
+    /// # Examples
     ///
     /// ```
     /// use std::ffi::NulError;
@@ -360,7 +360,7 @@ impl NormalizeOptions {
     /// }
     /// ```
     ///
-    /// ## Errors
+    /// # Errors
     ///
     /// The method will return an error if the supplied address
     /// contains an internal null byte. The error is represented by
@@ -415,7 +415,7 @@ impl<'a> IntoIterator for &'a mut NormalizedAddress {
 
 /// Normalize address with default options.
 ///
-/// ## Errors
+/// # Errors
 ///
 /// The method will return an error if the supplied address
 /// contains an internal null byte. The error is represented by
@@ -427,7 +427,7 @@ pub fn expand_address<'a>(address: &'a str) -> Result<NormalizedAddress, NulErro
 
 /// Normalize address with optional user-defined languages.
 ///
-/// ## Errors
+/// # Errors
 ///
 /// The method will return an error if the supplied address
 /// contains an internal null byte. The error is represented by

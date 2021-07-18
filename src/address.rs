@@ -59,7 +59,7 @@ pub struct AddressParserOptions {
 impl AddressParserOptions {
     /// Create options for the address parser.
     ///
-    /// ## Examples
+    /// # Examples
     ///
     /// ```
     /// use rustpostal::address;
