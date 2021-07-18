@@ -114,7 +114,7 @@ struct LibpostalNormalizeOptions {
 ///     Ok(())
 /// }
 /// ```
-#[derive(Clone, Default, Hash, Debug)]
+#[derive(Clone, Default, Hash, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct NormalizeOptions {
     languages: Option<Vec<CString>>,
     address_components: Option<AddressComponents>,
@@ -122,7 +122,7 @@ pub struct NormalizeOptions {
 }
 
 /// Collections of normalized variations of postal address.
-#[derive(Clone, Hash, Debug)]
+#[derive(Clone, Hash, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct NormalizedAddress {
     variations: Vec<String>,
     n: size_t,

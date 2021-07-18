@@ -43,6 +43,7 @@ use error::SetupError;
 
 /// Library modules to setup and teardown, at the start
 /// and at the end of our program.
+#[derive(Clone, Debug, Hash, Ord, PartialOrd, Eq, PartialEq)]
 pub enum LibModules {
     Address,
     Expand,

@@ -26,7 +26,7 @@ use std::slice::Iter;
 use crate::ffi;
 
 /// Represents the parsing result.
-#[derive(Clone, Default, Debug, Hash)]
+#[derive(Clone, Default, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct AddressParserResponse {
     tokens: Vec<String>,
     labels: Vec<String>,
@@ -50,7 +50,7 @@ impl<'a> IntoIterator for &'a AddressParserResponse {
 }
 
 /// Parsing options.
-#[derive(Default)]
+#[derive(Clone, Default, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct AddressParserOptions {
     language: Option<CString>,
     country: Option<CString>,
