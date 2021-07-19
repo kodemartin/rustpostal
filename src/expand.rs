@@ -134,22 +134,6 @@ impl LibpostalNormalizeOptions {
             .get_or_insert(unsafe { ffi::libpostal_get_default_options() })
     }
 
-    /// Free pointers to language options.
-    fn free_lang_ptrs(&mut self) {
-        let c_strings_buffered = self.lang_buffer.as_mut().is_some();
-        let ffi = self.inner_mut();
-        unsafe {
-            for i in 0..ffi.num_languages {
-                let ptr = ffi.languages.add(i);
-                if (c_strings_buffered) {
-                    let cstring = CString::from_raw(*ptr as *mut c_char);
-                } else {
-                    libc::free(*ptr as *mut libc::c_void);
-                }
-            }
-        }
-    }
-
     /// Update string options in ffi.
     fn update_string_options(&mut self, string_options: &StringOptions) {
         let (src, dst) = (self.inner_mut(), string_options);
@@ -180,10 +164,6 @@ impl LibpostalNormalizeOptions {
 
     /// Update languages in ffi.
     fn update_languages<'a, T: Iterator<Item = &'a CString>>(&mut self, languages: T) {
-        if self.lang_buffer.is_some() {
-            return;
-        }
-        self.free_lang_ptrs();
         let mut lang_buffer: Vec<*const c_char> = languages.map(|s| s.as_ptr()).collect();
         let ffi = self.inner_mut();
         ffi.languages = lang_buffer.as_mut_ptr();
