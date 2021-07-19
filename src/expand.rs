@@ -22,7 +22,6 @@
 //!     Ok(())
 //! }
 //! ```
-#![allow(unused)]
 
 use bitflags::bitflags;
 use std::ffi::{CStr, CString, NulError};
@@ -450,7 +449,7 @@ mod test {
 
     #[test]
     fn default_libpostal_normalize_options() {
-        let mut options: LibpostalNormalizeOptions = Default::default();
+        let options: LibpostalNormalizeOptions = Default::default();
         assert!(options.ffi.is_some());
         assert_eq!(*(&options.ffi.as_ref().unwrap().num_languages), 0);
         assert!(options.lang_buffer.is_none());
@@ -458,7 +457,7 @@ mod test {
 
     #[test]
     fn libpostal_normalize_options_update_languages() {
-        let mut languages = ["en", "gr"];
+        let languages = ["en", "gr"];
         let c_languages: Vec<CString> = languages
             .iter()
             .map(|s| CString::new(*s).unwrap())

@@ -1,5 +1,3 @@
-#![allow(unused)]
-
 use libc;
 
 #[link(name = "postal")]
