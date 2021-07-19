@@ -1,6 +1,6 @@
 [package]
 name = "rustpostal"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["Konstantinos Demartinos <kodemartin@protonmail.ch>"]
 edition = "2018"
 description = "Rust bindings to libpostal"
