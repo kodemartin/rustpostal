@@ -1,22 +1,13 @@
 extern crate rustpostal;
+use rustpostal::error::RuntimeError;
 use rustpostal::LibModules;
 
-fn collect_actual(address: &str) -> Vec<(String, String)> {
-    rustpostal::address::parse_address(address, None, None)
-        .into_iter()
-        .collect()
-}
-
-fn collect_expected(expected: Vec<(&str, &str)>) -> Vec<(String, String)> {
-    expected
-        .iter()
-        .map(|(c, l)| (String::from(*c), String::from(*l)))
-        .collect()
-}
-
 fn assert_actual_eq_expected(address: &str, expected: Vec<(&str, &str)>) {
-    let actual = collect_actual(address);
-    let expected = collect_expected(expected);
+    let response = rustpostal::address::parse_address(address, None, None).unwrap();
+    let actual: Vec<(&str, &str)> = response
+        .into_iter()
+        .map(|(l, t)| (l.as_str(), t.as_str()))
+        .collect();
     assert_eq!(actual, expected);
 }
 
@@ -61,10 +52,11 @@ fn es_parse() {
 }
 
 #[test]
-fn parse() {
-    unsafe { rustpostal::setup(LibModules::Address) }
+fn parse() -> Result<(), RuntimeError> {
+    let postal_module = LibModules::Address;
+    postal_module.setup()?;
     us_parse();
     gb_parse();
     es_parse();
-    unsafe { rustpostal::teardown(LibModules::Address) }
+    Ok(())
 }

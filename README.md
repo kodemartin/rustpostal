@@ -7,29 +7,28 @@ for street addresses anywhere in the world.
 
 
 ```rust
-use rustpostal;
 use rustpostal::address;
 use rustpostal::expand;
 use rustpostal::LibModules;
 
-fn main() {
-    unsafe { rustpostal::setup(LibModules::All) }
+fn main() -> Result<(), rustpostal::error::RuntimeError> {
+    let postal_module = LibModules::All;
+    postal_module.setup()?;
 
     let address = "St Johns Centre, Rope Walk, Bedford, Bedfordshire, MK42 0XE, United Kingdom";
 
-    let labeled_tokens = address::parse_address(address, None, None);
+    let labeled_tokens = address::parse_address(address, None, None)?;
 
-    for (token, label) in labeled_tokens.into_iter() {
+    for (token, label) in &labeled_tokens {
         println!("{}: {}", token, label);
     }
 
-    let expanded = expand::expand_address_with_options(address, Some(vec!["en"]));
+    let expanded = expand::expand_address_with_options(address, Some(["en"].iter()))?;
 
-    for expansion in expanded {
+    for expansion in &expanded {
         println!("{}", expansion);
     }
-
-    unsafe { rustpostal::teardown(LibModules::All) }
+    Ok(())
 }
 ```
 

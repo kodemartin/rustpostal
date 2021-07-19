@@ -12,3 +12,4 @@ license = "MIT"
 
 [dependencies]
 libc = "0.2.80"
+bitflags = "1.2.1"
