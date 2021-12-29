@@ -35,6 +35,7 @@ use std::process;
 use self::LibModules::*;
 
 pub mod address;
+pub mod parsed_address;
 pub mod error;
 pub mod expand;
 mod ffi;
