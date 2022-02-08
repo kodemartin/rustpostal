@@ -22,6 +22,7 @@
 //! ```
 use std::ffi::{CStr, CString, NulError};
 use std::slice::Iter;
+use std::collections::HashMap;
 
 use crate::ffi;
 
@@ -184,6 +185,119 @@ pub fn parse_address(
     options.parse(address)
 }
 
+/// A parsed address backed by a HashMap.
+/// The only way to make one is from an AddressParserResponse.
+/// It implements a getter method for each label that might
+/// be included in the AddressParserResponse.
+#[derive(Clone, Default, Debug, Eq, PartialEq)]
+pub struct ParsedAddress {
+    label_to_token: HashMap<String, String>,
+}
+
+impl ParsedAddress {
+    pub fn house(&self) -> Option<String> {
+        self.label_to_token.get("house").cloned()
+    }
+
+    pub fn house_number(&self) -> Option<String> {
+        self.label_to_token.get("house_number").cloned()
+    }
+
+    pub fn po_box(&self) -> Option<String> {
+        self.label_to_token.get("po_box").cloned()
+    }
+
+    pub fn building(&self) -> Option<String> {
+        self.label_to_token.get("building").cloned()
+    }
+
+    pub fn entrance(&self) -> Option<String> {
+        self.label_to_token.get("entrance").cloned()
+    }
+
+    pub fn staircase(&self) -> Option<String> {
+        self.label_to_token.get("staircase").cloned()
+    }
+
+    pub fn level(&self) -> Option<String> {
+        self.label_to_token.get("level").cloned()
+    }
+
+    pub fn unit(&self) -> Option<String> {
+        self.label_to_token.get("unit").cloned()
+    }
+
+    pub fn road(&self) -> Option<String> {
+        self.label_to_token.get("road").cloned()
+    }
+
+    pub fn metro_station(&self) -> Option<String> {
+        self.label_to_token.get("metro_station").cloned()
+    }
+
+    pub fn suburb(&self) -> Option<String> {
+        self.label_to_token.get("suburb").cloned()
+    }
+
+    pub fn city_district(&self) -> Option<String> {
+        self.label_to_token.get("city_district").cloned()
+    }
+
+    pub fn city(&self) -> Option<String> {
+        self.label_to_token.get("city").cloned()
+    }
+
+    pub fn state_district(&self) -> Option<String> {
+        self.label_to_token.get("state_district").cloned()
+    }
+
+    pub fn island(&self) -> Option<String> {
+        self.label_to_token.get("island").cloned()
+    }
+
+    pub fn state(&self) -> Option<String> {
+        self.label_to_token.get("state").cloned()
+    }
+
+    // postcode may be referred to as postal_code somewheres
+    // https://github.com/openvenues/libpostal/blob/9c975972985b54491e756efd70e416f18ff97958/src/address_parser.h#L122
+    pub fn postcode(&self) -> Option<String> {
+        self.label_to_token.get("postcode").cloned()
+    }
+
+    pub fn country_region(&self) -> Option<String> {
+        self.label_to_token.get("country_region").cloned()
+    }
+
+    pub fn country(&self) -> Option<String> {
+        self.label_to_token.get("country").cloned()
+    }
+
+    pub fn world_region(&self) -> Option<String> {
+        self.label_to_token.get("world_region").cloned()
+    }
+
+    pub fn website(&self) -> Option<String> {
+        self.label_to_token.get("website").cloned()
+    }
+
+    pub fn telephone(&self) -> Option<String> {
+        self.label_to_token.get("telephone").cloned()
+    }
+}
+
+impl From<AddressParserResponse> for ParsedAddress {
+    /// Create a new ParsedAddress from an AddressParserResponse.
+    fn from(response: AddressParserResponse) -> Self {
+        let mut parsed_address = ParsedAddress::default();
+        for (label, token) in &response {
+            parsed_address.label_to_token.insert(label.clone(), token.clone());
+        }
+        parsed_address
+    }
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -215,5 +329,32 @@ mod tests {
             println!("{}: {}", label, token);
         }
         Ok(())
+    }
+
+    #[test]
+    fn test_parsed_address_default() {
+        let parsed_address = ParsedAddress::default();
+        assert_eq!(parsed_address.house(), None);
+        assert_eq!(parsed_address.house_number(), None);
+        assert_eq!(parsed_address.po_box(), None);
+        assert_eq!(parsed_address.building(), None);
+        assert_eq!(parsed_address.entrance(), None);
+        assert_eq!(parsed_address.staircase(), None);
+        assert_eq!(parsed_address.level(), None);
+        assert_eq!(parsed_address.unit(), None);
+        assert_eq!(parsed_address.road(), None);
+        assert_eq!(parsed_address.metro_station(), None);
+        assert_eq!(parsed_address.suburb(), None);
+        assert_eq!(parsed_address.city_district(), None);
+        assert_eq!(parsed_address.city(), None);
+        assert_eq!(parsed_address.state_district(), None);
+        assert_eq!(parsed_address.island(), None);
+        assert_eq!(parsed_address.state(), None);
+        assert_eq!(parsed_address.postcode(), None);
+        assert_eq!(parsed_address.country_region(), None);
+        assert_eq!(parsed_address.country(), None);
+        assert_eq!(parsed_address.world_region(), None);
+        assert_eq!(parsed_address.website(), None);
+        assert_eq!(parsed_address.telephone(), None);
     }
 }
