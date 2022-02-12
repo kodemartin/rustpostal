@@ -1,7 +1,7 @@
 extern crate rustpostal;
+use rustpostal::address::ParsedAddress;
 use rustpostal::error::RuntimeError;
 use rustpostal::LibModules;
-use rustpostal::address::ParsedAddress;
 
 fn assert_actual_eq_expected(address: &str, expected: Vec<(&str, &str)>) {
     let response = rustpostal::address::parse_address(address, None, None).unwrap();
@@ -29,7 +29,10 @@ fn us_parse_to_struct() {
     let address = "Black Alliance for Just Immigration 660 Nostrand Ave, Brooklyn, N.Y., 11216";
     let response = rustpostal::address::parse_address(address, None, None).unwrap();
     let actual = ParsedAddress::from(response);
-    assert_eq!(actual.house(), Some("black alliance for just immigration".to_string()));
+    assert_eq!(
+        actual.house(),
+        Some("black alliance for just immigration".to_string())
+    );
     assert_eq!(actual.house_number(), Some("660".to_string()));
     assert_eq!(actual.road(), Some("nostrand ave".to_string()));
     assert_eq!(actual.city_district(), Some("brooklyn".to_string()));

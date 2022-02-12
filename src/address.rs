@@ -20,9 +20,9 @@
 //!     Ok(())
 //! }
 //! ```
+use std::collections::HashMap;
 use std::ffi::{CStr, CString, NulError};
 use std::slice::Iter;
-use std::collections::HashMap;
 
 use crate::ffi;
 
@@ -185,10 +185,10 @@ pub fn parse_address(
     options.parse(address)
 }
 
-/// A parsed address backed by a HashMap.
-/// The only way to make one is from an AddressParserResponse.
+/// A parsed address backed by a `HashMap`.
+/// The only way to make one is from an `AddressParserResponse`.
 /// It implements a getter method for each label that might
-/// be included in the AddressParserResponse.
+/// be included in the `AddressParserResponse`.
 #[derive(Clone, Default, Debug, Eq, PartialEq)]
 pub struct ParsedAddress {
     label_to_token: HashMap<String, String>,
@@ -287,16 +287,17 @@ impl ParsedAddress {
 }
 
 impl From<AddressParserResponse> for ParsedAddress {
-    /// Create a new ParsedAddress from an AddressParserResponse.
+    /// Create a new `ParsedAddress` from an `AddressParserResponse`.
     fn from(response: AddressParserResponse) -> Self {
         let mut parsed_address = ParsedAddress::default();
         for (label, token) in &response {
-            parsed_address.label_to_token.insert(label.clone(), token.clone());
+            parsed_address
+                .label_to_token
+                .insert(label.clone(), token.clone());
         }
         parsed_address
     }
 }
-
 
 #[cfg(test)]
 mod tests {
