@@ -22,8 +22,8 @@
 //! ```
 use std::collections::HashMap;
 use std::ffi::{CStr, CString, NulError};
-use std::vec::IntoIter;
 use std::slice::Iter;
+use std::vec::IntoIter;
 
 use crate::ffi;
 
