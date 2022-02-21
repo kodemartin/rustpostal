@@ -5,9 +5,9 @@ use rustpostal::LibModules;
 
 fn assert_actual_eq_expected(address: &str, expected: Vec<(&str, &str)>) {
     let response = rustpostal::address::parse_address(address, None, None).unwrap();
-    let actual: Vec<(&str, &str)> = response
+    let actual: Vec<(&str, &str)> = (&response)
         .into_iter()
-        .map(|(l, t)| (l.as_str(), t.as_str()))
+        .map(|(l, t)| (l.as_ref(), t.as_ref()))
         .collect();
     assert_eq!(actual, expected);
 }

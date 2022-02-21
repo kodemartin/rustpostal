@@ -23,6 +23,7 @@
 use std::collections::HashMap;
 use std::ffi::{CStr, CString, NulError};
 use std::slice::Iter;
+use std::vec::IntoIter;
 
 use crate::ffi;
 
@@ -37,6 +38,16 @@ impl AddressParserResponse {
     /// Create a new value.
     pub fn new() -> AddressParserResponse {
         Default::default()
+    }
+}
+
+impl IntoIterator for AddressParserResponse {
+    type Item = (String, String);
+    type IntoIter = std::iter::Zip<IntoIter<String>, IntoIter<String>>;
+
+    /// Iterates over `(label, token)` pairs by consuming the value.
+    fn into_iter(self) -> Self::IntoIter {
+        self.labels.into_iter().zip(self.tokens.into_iter())
     }
 }
 
@@ -290,10 +301,8 @@ impl From<AddressParserResponse> for ParsedAddress {
     /// Create a new `ParsedAddress` from an `AddressParserResponse`.
     fn from(response: AddressParserResponse) -> Self {
         let mut parsed_address = ParsedAddress::default();
-        for (label, token) in &response {
-            parsed_address
-                .label_to_token
-                .insert(label.clone(), token.clone());
+        for (label, token) in response {
+            parsed_address.label_to_token.insert(label, token);
         }
         parsed_address
     }
