@@ -40,6 +40,9 @@ fn main() -> Result<(), rustpostal::error::RuntimeError> {
 
 ## Tests
 
+One may need to also export the installation path to `LIBRARY_PATH` so that libpostal can
+be found at compile time.
+
 ```
 $ cargo test -- --test-threads 1
 ```
