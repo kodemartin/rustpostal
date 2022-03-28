@@ -5,7 +5,6 @@ for street addresses anywhere in the world.
 
 ## Usage
 
-
 ```rust
 use rustpostal::address;
 use rustpostal::expand;
@@ -36,7 +35,8 @@ fn main() -> Result<(), rustpostal::error::RuntimeError> {
 
 1. Install the C library: See [installation instructions][linux-install].
 
-2. Export the installation path to `LD_LIBRARY_PATH`.
+2. Export the installation path to `LD_LIBRARY_PATH`.  
+In some situations you might also need to export the installation path to `LIBRARY_PATH`.
 
 ## Tests
 
